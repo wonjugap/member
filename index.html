@@ -17,10 +17,10 @@
         let columnSettings = { name: 1, dob: 2, phone: 3, dong: 4 };
         
         // 기본 사용자 계정 (Firebase 연결 실패 시 사용)
-        let defaultUsers = {
-            'admin': { password: 'admin123', permissions: ['생일검색', '당원검색'] },
-            'user': { password: 'user123', permissions: ['생일검색', '당원검색'] }
-        };
+   //     let defaultUsers = {
+     //       'admin': { password: 'admin123', permissions: ['생일검색', '당원검색'] },
+       //     'user': { password: 'user123', permissions: ['생일검색', '당원검색'] }
+     //   };
 
         // 데이터 서버 초기화 시도 (모바일 최적화 강화)
         async function initializeFirebaseForMobile() {
@@ -827,7 +827,7 @@
                 
                 <p style="margin-top: 20px; font-size: 0.9em; color: #6c757d; line-height: 1.4;">
                     승인된 사용자만 접근 가능합니다<br>
-                    <small>테스트 계정: admin/admin123 또는 user/user123</small>
+              //      <small>테스트 계정: admin/admin123 또는 user/user123</small>
                 </p>
             </div>
         </div>
