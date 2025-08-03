@@ -2133,8 +2133,8 @@
                 }
                 saveUsersToStorage();
                 console.log('users 객체 강제 초기화 완료');
-
-
+            }
+ 
             if (users[username] && users[username].password === password) {
                 currentUser = username;
                 
@@ -2163,10 +2163,9 @@
                         return;
                     }
                 }
-                
                 alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.);
             }
-        
+        }
 
         // 로그아웃 함수
         function logout() {
