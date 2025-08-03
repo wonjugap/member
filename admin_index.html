@@ -2115,28 +2115,6 @@ function login() {
         return;
     }
 
-    // users 객체가 없거나 admin 계정이 없으면 초기화
-    if (!window.users || !window.users.admin) {
-        console.log('users 객체가 없거나 admin 계정이 없음. 초기화 진행');
-        window.users = {
-            'admin': {
-                password: 'admin',
-                permissions: [
-                    '1. 파일/열 설정',
-                    '2. 생일 검색',
-                    '3. 당원 검색',
-                    '4. 데이터 관리',
-                    '5. 통계/설정',
-                    '6. 사용자 관리'
-                ]
-            }
-        };
-        if (typeof saveUsersToStorage === 'function') {
-            saveUsersToStorage();
-        }
-        console.log('users 객체 강제 초기화 완료');
-    }
-
     // 등록된 사용자 확인
     if (!window.users[username]) {
         alert('❌ 등록되지 않은 사용자입니다.');
@@ -2145,23 +2123,6 @@ function login() {
 
     // 비밀번호 검증
     if (window.users[username].password !== password) {
-        // admin 계정 로그인 실패 시 초기화 안내
-        if (username === 'admin') {
-            const resetConfirm = confirm(
-                '❌ 로그인 실패\n\n' +
-                'admin 계정 로그인에 실패했습니다.\n\n' +
-                '원인:\n' +
-                '• 비밀번호가 변경되었거나\n' +
-                '• 저장된 데이터에 문제가 있을 수 있습니다\n\n' +
-                '✅ 확인: admin 계정을 기본값(admin/admin)으로 초기화\n' +
-                '❌ 취소: 다시 시도'
-            );
-            if (resetConfirm) {
-                resetAdminAccount();
-                return;
-            }
-        }
-
         alert('❌ 비밀번호가 올바르지 않습니다.');
         return;
     }
