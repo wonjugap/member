@@ -643,6 +643,50 @@
             color: #856404;
         }
 
+        .phone-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .phone-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid;
+        }
+
+        .call-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-color: #28a745;
+        }
+
+        .call-btn:hover {
+            background: linear-gradient(135deg, #1e7e34, #17a085);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        .sms-btn {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            color: white;
+            border-color: #007bff;
+        }
+
+        .sms-btn:hover {
+            background: linear-gradient(135deg, #0056b3, #520dc2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        /* 모바일 최적화 */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -684,6 +728,17 @@
                 margin: 10% auto;
                 padding: 20px;
             }
+
+            .phone-btn {
+                padding: 8px 14px;
+                font-size: 0.9em;
+                min-width: 90px;
+                text-align: center;
+            }
+            
+            .phone-actions {
+                justify-content: flex-start;
+            }
         }
     </style>
 </head>
@@ -709,7 +764,7 @@
                     <h4 style="margin-bottom: 10px;">👤 사용자 시스템 안내</h4>
                     <ul style="margin-left: 20px; line-height: 1.6;">
                         <li>ID와 비밀번호를 입력하세요</li>
-                        <li>ID와 PASSWORD는 관리자에게 문의하세요</li>
+                        <li>ID와 비밀번호는 관리자에게 문의하세요</li>
                      </ul>
                 </div>
                 
@@ -1006,6 +1061,32 @@ function calculateAge(dob) {
                 return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
             }
             return phone;
+        }
+
+        // 전화번호 액션 버튼 생성
+        function createPhoneActionButtons(phone) {
+            if (!phone) return '';
+            
+            const cleanPhone = phone.replace(/[^\d]/g, '');
+            const formattedPhone = formatPhoneNumber(phone);
+            
+            // 전화번호가 유효하지 않은 경우
+            if (cleanPhone.length < 10) {
+                return `📞 전화번호: ${formattedPhone} <small style="color: #dc3545;">(유효하지 않은 번호)</small>`;
+            }
+            
+            return `
+                📞 전화번호: ${formattedPhone}
+                <div class="phone-actions" onclick="event.stopPropagation();" style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <a href="tel:${cleanPhone}" class="phone-btn call-btn">📞 전화걸기</a>
+                    <a href="sms:${cleanPhone}" class="phone-btn sms-btn">💬 문자보내기</a>
+                </div>
+            `;
+        }
+
+        // 모바일 감지
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
 function isBirthday(dob, targetDate = new Date()) {
@@ -1347,14 +1428,16 @@ function isBirthday(dob, targetDate = new Date()) {
             }
             
             results.forEach(member => {
+                const phoneHtml = member.phone ? createPhoneActionButtons(member.phone) : '';
+                
                 html += `
                     <div class="member-item" onclick="showMemberDetail(${JSON.stringify(member).replace(/"/g, '&quot;')})">
                         <div class="member-name">${member.name}</div>
                         <div class="member-details">
                             🎂 생년월일: ${formatDate(member.dob)} (${member.age}세, ${member.ageGroup})<br>
-                            ${member.phone ? `📞 전화번호: ${formatPhoneNumber(member.phone)}<br>` : ''}
-                            ${member.dong ? `🏠 읍면동: ${member.dong}` : ''}
-                            <br><small style="color: #666;">👆 클릭하여 상세 정보 보기</small>
+                            ${phoneHtml}
+                            ${member.dong ? `🏠 읍면동: ${member.dong}<br>` : ''}
+                            <small style="color: #666;">👆 클릭하여 상세 정보 보기</small>
                         </div>
                     </div>
                 `;
@@ -1381,6 +1464,7 @@ function isBirthday(dob, targetDate = new Date()) {
             groupedResults.forEach((group, groupIndex) => {
                 const rep = group.representative;
                 const isDuplicate = group.count > 1;
+                const phoneHtml = rep.phone ? createPhoneActionButtons(rep.phone) : '';
                 
                 html += `
                     <div class="member-item ${isDuplicate ? 'duplicate' : ''}" onclick="showMemberGroup(${groupIndex})">
@@ -1390,9 +1474,9 @@ function isBirthday(dob, targetDate = new Date()) {
                         </div>
                         <div class="member-details">
                             🎂 나이: ${rep.age}세 (${rep.ageGroup})<br>
-                            ${rep.phone ? `📞 전화번호: ${formatPhoneNumber(rep.phone)}<br>` : ''}
-                            ${rep.dong ? `🏠 주소: ${rep.dong}` : ''}
-                            ${isDuplicate ? '<br><small style="color: #dc3545;">⚠️ 클릭하여 중복 데이터 확인</small>' : '<br><small style="color: #666;">👆 클릭하여 상세 정보 보기</small>'}
+                            ${phoneHtml}
+                            ${rep.dong ? `🏠 주소: ${rep.dong}<br>` : ''}
+                            ${isDuplicate ? '<small style="color: #dc3545;">⚠️ 클릭하여 중복 데이터 확인</small>' : '<small style="color: #666;">👆 클릭하여 상세 정보 보기</small>'}
                         </div>
                     </div>
                 `;
@@ -1567,16 +1651,19 @@ function isBirthday(dob, targetDate = new Date()) {
             const title = document.getElementById('memberDetailTitle');
             const content = document.getElementById('memberDetailContent');
 
+            const phoneHtml = member.phone ? createPhoneActionButtons(member.phone) : '';
+
             title.textContent = `${member.name}님의 상세 정보`;
             content.innerHTML = `
                 <div style="padding: 20px;">
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                         <div style="margin-bottom: 10px;"><strong>이름:</strong> ${member.name}</div>
                         <div style="margin-bottom: 10px;"><strong>생년월일:</strong> ${formatDate(member.dob)}</div>
-                        <div style="margin-bottom: 10px;"><strong>나이:</strong> ${member.age}세 (${member.ageGroup})</div>
-                        ${member.phone ? `<div style="margin-bottom: 10px;"><strong>전화번호:</strong> ${formatPhoneNumber(member.phone)}</div>` : ''}
+                        <div style="margin-bottom: 15px;"><strong>나이:</strong> ${member.age}세 (${member.ageGroup})</div>
+                        ${member.phone ? `<div style="margin-bottom: 15px;">${phoneHtml}</div>` : ''}
                         ${member.dong ? `<div><strong>주소:</strong> ${member.dong}</div>` : ''}
                     </div>
+                    ${isMobile() ? '<div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 8px; color: #0c5460; font-size: 0.9em;"><strong>💡 팁:</strong> 전화걸기 및 문자보내기 버튼을 터치하여 바로 연락할 수 있습니다.</div>' : ''}
                 </div>
             `;
 
@@ -1603,13 +1690,15 @@ function isBirthday(dob, targetDate = new Date()) {
                 `;
 
                 group.members.forEach((member, index) => {
+                    const phoneHtml = member.phone ? createPhoneActionButtons(member.phone) : '';
+                    
                     duplicateHtml += `
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #dc3545;">
                             <div style="margin-bottom: 10px;"><strong>데이터 ${index + 1}</strong></div>
                             <div style="margin-bottom: 5px;"><strong>이름:</strong> ${member.name}</div>
                             <div style="margin-bottom: 5px;"><strong>생년월일:</strong> ${formatDate(member.dob)}</div>
-                            <div style="margin-bottom: 5px;"><strong>나이:</strong> ${member.age}세</div>
-                            ${member.phone ? `<div style="margin-bottom: 5px;"><strong>전화번호:</strong> ${formatPhoneNumber(member.phone)}</div>` : ''}
+                            <div style="margin-bottom: 10px;"><strong>나이:</strong> ${member.age}세</div>
+                            ${member.phone ? `<div style="margin-bottom: 10px;">${phoneHtml}</div>` : ''}
                             ${member.dong ? `<div style="margin-bottom: 10px;"><strong>주소:</strong> ${member.dong}</div>` : ''}
                         </div>
                     `;
@@ -1621,6 +1710,7 @@ function isBirthday(dob, targetDate = new Date()) {
                             • 관리자에게 중복 데이터 정리를 요청하세요<br>
                             • 정확한 정보를 확인하여 중복을 해결하세요
                         </div>
+                        ${isMobile() ? '<div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 8px; color: #0c5460; font-size: 0.9em;"><strong>💡 팁:</strong> 전화걸기 및 문자보내기 버튼을 터치하여 바로 연락할 수 있습니다.</div>' : ''}
                     </div>
                 `;
                 content.innerHTML = duplicateHtml;
