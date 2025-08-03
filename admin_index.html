@@ -2077,25 +2077,7 @@
             return false;
         }
 
-        // admin 계정 강제 초기화 함수
-        function resetAdminAccount() {
-            users.admin = {
-                password: 'admin',
-                permissions: [
-                    '1. 파일/열 설정',  
-                    '2. 생일 검색',
-                    '3. 당원 검색',
-                    '4. 데이터 관리',
-                    '5. 통계/설정',
-                    '6. 사용자 관리'
-                ]
-            };
-            saveUsersToStorage();
-            console.log('admin 계정이 초기화되었습니다. ID: admin, PW: admin');
-            alert('admin 계정이 초기화되었습니다.\nID: admin\nPW: admin');
-        }
-
-        // 전체 시스템 초기화 함수
+       // 전체 시스템 초기화 함수
         function resetEverything() {
             if (confirm('⚠️ 모든 데이터를 초기화하시겠습니까?\n\n• 사용자 계정\n• 업로드된 파일\n• 모든 설정')) {
                 localStorage.clear();
