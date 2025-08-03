@@ -2134,33 +2134,7 @@
         saveUsersToStorage();
     }
 }
-            console.log('현재 users 객체:', users);
-
-            if (!username || !password) {
-                alert('사용자 ID와 비밀번호를 모두 입력하세요.');
-                return;
-            }
-
-            if (!users || !users.admin) {
-                console.log('users 객체가 없거나 admin 계정이 없음. 초기화 진행');
-                users = {
-                    'admin': { 
-                        password: 'admin', 
-                        permissions: [
-                            '1. 파일/열 설정',
-                            '2. 생일 검색', 
-                            '3. 당원 검색',
-                            '4. 데이터 관리',
-                            '5. 통계/설정',
-                            '6. 사용자 관리'
-                        ]
-                    }
-                };
-                saveUsersToStorage();
-                console.log('users 객체 강제 초기화 완료');
-            }
-
-            if (users[username] && users[username].password === password) {
+              if (users[username] && users[username].password === password) {
                 currentUser = username;
                 
                 document.getElementById('loginScreen').style.display = 'none';
