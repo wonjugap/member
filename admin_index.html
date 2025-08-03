@@ -2106,19 +2106,6 @@
         // 로그인 함수
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
-// Firebase 초기화 코드 (프로젝트에 맞게 설정해야 합니다.)
-const firebaseConfig = {
-         apiKey: "AIzaSyAFAsd9XBblWD1G2vVrP48T9IQqwWoDZro",
-         authDomain: "wonju-minjoo-member-system.firebaseapp.com",
-         projectId: "wonju-minjoo-member-system",
-         storageBucket: "wonju-minjoo-member-system.firebasestorage.app",
-         messagingSenderId: "227156177261",
-         appId: "1:227156177261:web:9f37ea54dab14265c2aa64"
-};
-
-// firebaseConfig로 앱 초기화
-// firebase.initializeApp(firebaseConfig);
-
 const auth = getAuth();
 
 // --- 로그인 함수 (보안 강화 버전) ---
