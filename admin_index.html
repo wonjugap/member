@@ -662,7 +662,15 @@
         window.updateSystemAfterDataLoad = function() { console.log('updateSystemAfterDataLoad 함수 호출됨'); }
         window.calculateAge = function(birthDate) { console.log('calculateAge 함수 호출됨'); return 0; }
         window.getAgeGroup = function(age) { console.log('getAgeGroup 함수 호출됨'); return ''; }
-        window.updateFirebaseStatus = function(status, message) { console.log(`updateFirebaseStatus 호출됨: ${message}`); }
+        window.updateFirebaseStatus = function(status, message) {
+            const indicator = document.getElementById('firebaseConnectionIndicator');
+            const statusText = document.getElementById('firebaseConnectionStatus');
+            if (indicator && statusText) {
+                indicator.classList.remove('connected', 'disconnected');
+                indicator.classList.add(status ? 'connected' : 'disconnected');
+                statusText.textContent = message;
+            }
+            console.log(`updateFirebaseStatus 호출됨: ${message}`);
         window.showOfflineNotice = function() { console.log('showOfflineNotice 함수 호출됨'); }
         window.addUser = function() { console.log('addUser 함수 호출됨'); }
         window.closeModal = function() { console.log('closeModal 함수 호출됨'); }
@@ -1545,16 +1553,6 @@
         window.updateSystemAfterDataLoad = function() { console.log('updateSystemAfterDataLoad 함수 호출됨'); }
         window.calculateAge = function(birthDate) { console.log('calculateAge 함수 호출됨'); return 0; }
         window.getAgeGroup = function(age) { console.log('getAgeGroup 함수 호출됨'); return ''; }
-        window.updateFirebaseStatus = function(status, message) {
-            const indicator = document.getElementById('firebaseConnectionIndicator');
-            const statusText = document.getElementById('firebaseConnectionStatus');
-            if (indicator && statusText) {
-                indicator.classList.remove('connected', 'disconnected');
-                indicator.classList.add(status ? 'connected' : 'disconnected');
-                statusText.textContent = message;
-            }
-            console.log(`updateFirebaseStatus 호출됨: ${message}`);
-        }
         window.showOfflineNotice = function() { console.log('showOfflineNotice 함수 호출됨'); }
         window.openTab = function(event, tabName) { console.log(`openTab 함수 호출됨: ${tabName}`); }
         window.applyColumnSettings = function() { console.log('applyColumnSettings 함수 호출됨'); }
