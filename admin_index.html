@@ -526,7 +526,7 @@
                             statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
                         }
                         reject(error);
-                    }
+                    });
                 });
             };
             
@@ -1671,12 +1671,8 @@
         phone: 0,
         dong: 0
     };
-    let users = {
-        'admin': {
-            password: 'admin',
-            permissions: ['admin', 'edit']
-        }
-    };
+    // **수정된 부분: `users` 객체를 전역 변수로 선언하고, 초기화 로직을 DOMContentLoaded로 이동**
+    let users = {};
     let currentUser = null;
     let ageChartInstance = null;
     let dongChartInstance = null;
@@ -2357,6 +2353,18 @@
     
     // --- 초기 실행 ---
     document.addEventListener('DOMContentLoaded', () => {
+        const storedUsers = localStorage.getItem('users');
+        if (storedUsers) {
+            try {
+                users = JSON.parse(storedUsers);
+            } catch (e) {
+                console.error("Failed to parse users from localStorage, resetting to default.", e);
+                users = { 'admin': { password: 'admin', permissions: ['admin', 'edit'] } };
+            }
+        } else {
+            users = { 'admin': { password: 'admin', permissions: ['admin', 'edit'] } };
+        }
+        
         checkLoginState();
         updateStats(); // 초기 통계 업데이트 (0으로)
         updateCharts(); // 초기 차트 업데이트 (비어있음)
