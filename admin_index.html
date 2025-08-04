@@ -410,7 +410,6 @@ window.loadUsersFromFirebase = function(statusEl) {
                 });
             };
             
-            // 당원 데이터 Firebase 동기화
 // 당원 데이터 Firebase 동기화
             window.syncMemberDataToFirebase = function() {
                 return new Promise((resolve, reject) => {
@@ -483,32 +482,35 @@ window.loadUsersFromFirebase = function(statusEl) {
                             });
                         });
                         
-                        Promise.all([metaPromise, ...chunkPromises]).then(() => {
-                            if (statusEl) {
-                                statusEl.innerHTML = `✅ 당원 데이터가 성공적으로 동기화되었습니다. (${convertedData.length}명, ${chunks.length}개 청크)`;
-                            }
-                            console.log('Firebase 청크 동기화 완료:', convertedData.length, '명,', chunks.length, '개 청크');
-                            resolve({
-                                success: true,
-                                count: convertedData.length,
-                                chunks: chunks.length
+                        Promise.all([metaPromise, ...chunkPromises])
+                            .then(() => {
+                                if (statusEl) {
+                                    statusEl.innerHTML = `✅ 당원 데이터가 성공적으로 동기화되었습니다. (${convertedData.length}명, ${chunks.length}개 청크)`;
+                                }
+                                console.log('Firebase 청크 동기화 완료:', convertedData.length, '명,', chunks.length, '개 청크');
+                                resolve({
+                                    success: true,
+                                    count: convertedData.length,
+                                    chunks: chunks.length
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Firebase 청크 동기화 에러:', error);
+                                if (statusEl) {
+                                    statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
+                                }
+                                reject(error);
                             });
-                        }).catch(error => {
-                            console.error('Firebase 청크 동기화 에러:', error);
-                            if (statusEl) {
-                                statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
-                            }
-                            reject(error);
-                        });
                     } catch (error) {
                         console.error('데이터 변환 에러:', error);
                         if (statusEl) {
                             statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
                         }
                         reject(error);
-                    } // <-- 이 괄호가 누락되어 있었습니다.
+                    }
                 });
             };
+            
             // Firebase 연결 상태 확인
             window.checkFirebaseConnection = function() {
                 console.log('🔍 Firebase 연결 상태 확인...');
