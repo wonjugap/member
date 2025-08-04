@@ -411,6 +411,7 @@ window.loadUsersFromFirebase = function(statusEl) {
             };
             
             // 당원 데이터 Firebase 동기화
+// 당원 데이터 Firebase 동기화
             window.syncMemberDataToFirebase = function() {
                 return new Promise((resolve, reject) => {
                     if (!isFirebaseReady || !db) {
@@ -499,17 +500,15 @@ window.loadUsersFromFirebase = function(statusEl) {
                             }
                             reject(error);
                         });
-                        
                     } catch (error) {
                         console.error('데이터 변환 에러:', error);
                         if (statusEl) {
                             statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
                         }
                         reject(error);
-                    });
+                    } // <-- 이 괄호가 누락되어 있었습니다.
                 });
             };
-            
             // Firebase 연결 상태 확인
             window.checkFirebaseConnection = function() {
                 console.log('🔍 Firebase 연결 상태 확인...');
