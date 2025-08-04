@@ -260,76 +260,55 @@
         // Firebase 관련 함수들 정의
         function defineFirebaseFunctions() {
             // 사용자 정보 Firebase 로드
-            window.loadUsersFromFirebase = function() {
-                return new Promise((resolve, reject) => {
-                    console.log('🔄 Firebase에서 사용자 정보 로드 시작...');
-                    
-                    if (!isFirebaseReady || !db) {
-                        console.log('❌ Firebase 연결되지 않음');
-                        reject(new Error('Firebase 연결이 필요합니다.'));
-                        return;
-                    }
-                    
-                    const statusEl = document.getElementById('syncStatus');
-                    if (statusEl) {
-                        statusEl.innerHTML = '📥 Firebase에서 사용자 정보를 불러오는 중...';
-                    }
-                    
-                    getDoc(doc(db, 'system', 'users')).then((docSnapshot) => {
-                        if (docSnapshot.exists()) {
-                            const data = docSnapshot.data();
-                            console.log('Firebase에서 받은 사용자 데이터:', data);
-                            
-                            if (data.users) {
-                                const oldUserCount = Object.keys(window.users).length;
-                                window.users = data.users;
-                                const newUserCount = Object.keys(window.users).length;
-                                
-                                // 로컬 저장소 제거로 인해 이 코드는 더 이상 필요 없음
-                                // if (window.saveUsersToStorage) {
-                                //     window.saveUsersToStorage();
-                                // }
-                                
-                                if (statusEl) {
-                                    statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
-                                }
-                                
-                                console.log('✅ Firebase에서 사용자 정보를 불러왔습니다.');
-                                console.log(`사용자 수: ${oldUserCount} → ${newUserCount}`);
-                                
-                                if (window.displayUserList) {
-                                    window.displayUserList();
-                                }
-                                
-                                alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
-                                
-                                resolve(true);
-                            } else {
-                                console.log('❌ Firebase에 사용자 데이터가 없음');
-                                if (statusEl) {
-                                    statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
-                                }
-                                alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
-                                resolve(false);
-                            }
-                        } else {
-                            console.log('❌ Firebase 사용자 문서가 존재하지 않음');
+window.loadUsersFromFirebase = function(statusEl) {
+        return new Promise((resolve, reject) => {
+            if (!isFirebaseReady) {
+                console.warn('Firebase가 아직 준비되지 않았습니다. 잠시 후 재시도합니다.');
+                setTimeout(() => {
+                    resolve(window.loadUsersFromFirebase(statusEl));
+                }, 1000); // 1초 후 재시도
+                return;
+            }
+
+            if (statusEl) {
+                statusEl.innerHTML = '🔍 클라우드 데이터 불러오는 중...';
+            }
+
+            try {
+                // Firebase Realtime Database에서 사용자 데이터 불러오기
+                get(child(dbRef, `users`))
+                    .then((snapshot) => {
+                        if (snapshot.exists()) {
+                            window.users = snapshot.val();
+                            console.log('✅ Firebase 사용자 데이터 로드 성공:', window.users);
                             if (statusEl) {
-                                statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
+                                statusEl.innerHTML = '✅ 클라우드 데이터 로드 완료';
                             }
-                            alert('📭 Firebase에 사용자 문서가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
-                            resolve(false);
+                            resolve(window.users);
+                        } else {
+                            console.log('⚠️ Firebase에 사용자 데이터가 없습니다.');
+                            if (statusEl) {
+                                statusEl.innerHTML = '⚠️ 클라우드 데이터 없음';
+                            }
+                            resolve({});
                         }
-                    }).catch(error => {
-                        console.error('❌ Firebase 사용자 로드 에러:', error);
+                    })
+                    .catch((error) => {
+                        console.error('Firebase 사용자 데이터 로드 실패:', error);
                         if (statusEl) {
-                            statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
+                            statusEl.innerHTML = `❌ 클라우드 데이터 로드 실패: ${error.message}`;
                         }
-                        alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
                         reject(error);
                     });
-                });
-            };
+            } catch (error) {
+                console.error('Firebase 작업 중 에러:', error);
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 클라우드 데이터 로드 실패: ${error.message}`;
+                }
+                reject(error);
+            }
+        });
+    };
             
             // 당원 데이터 Firebase 로드
             window.loadMemberDataFromFirebase = function() {
