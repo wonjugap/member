@@ -266,7 +266,7 @@
                     
                     if (!isFirebaseReady || !db) {
                         console.log('❌ Firebase 연결되지 않음');
-                        resolve(false);
+                        reject(new Error('Firebase 연결이 필요합니다.'));
                         return;
                     }
                     
@@ -285,9 +285,10 @@
                                 window.users = data.users;
                                 const newUserCount = Object.keys(window.users).length;
                                 
-                                if (window.saveUsersToStorage) {
-                                    window.saveUsersToStorage();
-                                }
+                                // 로컬 저장소 제거로 인해 이 코드는 더 이상 필요 없음
+                                // if (window.saveUsersToStorage) {
+                                //     window.saveUsersToStorage();
+                                // }
                                 
                                 if (statusEl) {
                                     statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
@@ -325,7 +326,7 @@
                             statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
                         }
                         alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
-                        resolve(false);
+                        reject(error);
                     });
                 });
             };
@@ -690,7 +691,7 @@
             }
             
             displayAllMembers();
-            saveDataToStorage();
+            // saveDataToStorage 제거
             
             // 전체 시스템 상태 업데이트
             updateSystemAfterDataLoad();
@@ -746,7 +747,7 @@
             }
             
             displayAllMembers();
-            saveDataToStorage();
+            // saveDataToStorage 제거
             
             // 전체 시스템 상태 업데이트
             updateSystemAfterDataLoad();
@@ -799,7 +800,7 @@
             
             setTimeout(() => {
                 if (window.updateFirebaseStatus) {
-                    window.updateFirebaseStatus(false, '오프라인 모드 (로컬 저장소만 사용)');
+                    window.updateFirebaseStatus(false, '오프라인 모드 (로컬 파일만 사용)');
                 }
                 
                 if (window.showOfflineNotice) {
@@ -1127,14 +1128,7 @@
             line-height: 1.6;
         }
 
-        .restore-section {
-            background: #d1f2eb;
-            border: 2px solid #a3d9d3;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 25px;
-            display: none;
-        }
+        /* 로컬 저장소 복원 섹션 제거됨 */
 
         .firebase-setup-notice {
             background: #fff3cd;
@@ -1518,12 +1512,6 @@
                     </div>
                 </div>
                 
-                <div class="restore-section" id="restoreSection">
-                    <h4 style="color: #00796b;">💾 이전에 저장된 데이터가 있습니다!</h4>
-                    <p>마지막으로 업로드했던 파일을 다시 불러오시겠습니까?</p>
-                    <button class="btn btn-success" onclick="restoreDataFromStorage()">이전 데이터 불러오기</button>
-                </div>
-
             </div>
 
             <div id="memberSearch" class="tab-pane">
@@ -1671,7 +1659,6 @@
         phone: 0,
         dong: 0
     };
-    // **수정된 부분: `users` 객체를 전역 변수로 선언하고, 초기화 로직을 DOMContentLoaded로 이동**
     let users = {};
     let currentUser = null;
     let ageChartInstance = null;
@@ -1703,7 +1690,6 @@
     const maleCountStat = document.getElementById('maleCount');
     const femaleCountStat = document.getElementById('femaleCount');
     const avgAgeStat = document.getElementById('avgAge');
-    const restoreSection = document.getElementById('restoreSection');
     const userListElement = document.getElementById('userList');
     const userManagementArea = document.getElementById('userManagementArea');
     const searchCountInfo = document.getElementById('searchCountInfo');
@@ -1748,18 +1734,12 @@
             loginScreen.style.display = 'none';
             mainApp.style.display = 'block';
             currentUserSpan.textContent = `현재 사용자: ${currentUser}`;
-            saveLoginState();
             
-            // localStorage에서 데이터 복원 시도
-            if (localStorage.getItem('memberData') && localStorage.getItem('columnSettings')) {
-                restoreSection.style.display = 'block';
-            } else {
-                restoreSection.style.display = 'none';
-            }
+            // 데이터는 Firebase에서 불러와야 하므로, 복원 로직 제거
+            
         } else {
             loginMessage.textContent = '❌ 로그인 실패: 아이디 또는 비밀번호가 잘못되었습니다.';
             loginMessage.style.display = 'block';
-            // 초기화 기능을 삭제했으므로, 이 부분은 그대로 두면 됩니다.
         }
     }
 
@@ -1770,8 +1750,14 @@
         userIdInput.value = '';
         passwordInput.value = '';
         loginMessage.style.display = 'none';
+        
+        // 로컬 저장소 삭제
         localStorage.removeItem('loginState');
+        
         clearData();
+        
+        // 새로고침하여 초기 상태로 돌아가도록 함
+        location.reload();
     }
 
     function clearData() {
@@ -1781,36 +1767,13 @@
         searchResultsDiv.innerHTML = '<p class="no-data">파일을 업로드하거나 클라우드 데이터를 불러오세요.</p>';
         updateStats();
         updateCharts();
-        saveDataToStorage();
+        
+        // 로컬 저장소에서 데이터 삭제
+        localStorage.removeItem('memberData');
+        localStorage.removeItem('columnSettings');
     }
 
-    function saveLoginState() {
-        const loginState = {
-            user: currentUser,
-            timestamp: new Date().getTime()
-        };
-        localStorage.setItem('loginState', JSON.stringify(loginState));
-    }
-
-    function checkLoginState() {
-        const storedState = localStorage.getItem('loginState');
-        if (storedState) {
-            const state = JSON.parse(storedState);
-            const now = new Date().getTime();
-            const oneHour = 60 * 60 * 1000;
-            if (now - state.timestamp < oneHour) {
-                currentUser = state.user;
-                loginScreen.style.display = 'none';
-                mainApp.style.display = 'block';
-                currentUserSpan.textContent = `현재 사용자: ${currentUser}`;
-                
-                // 데이터 복원 섹션 표시 여부 결정
-                if (localStorage.getItem('memberData') && localStorage.getItem('columnSettings')) {
-                    restoreSection.style.display = 'block';
-                }
-            }
-        }
-    }
+    // 로컬 저장소 기반의 `saveLoginState`, `checkLoginState` 함수는 모두 삭제됨
 
     function openTab(event, tabName) {
         tabPanes.forEach(tab => tab.classList.remove('active'));
@@ -1871,8 +1834,6 @@
                     displayAllMembers();
                     updateStats();
                     updateCharts();
-                    saveDataToStorage();
-                    restoreSection.style.display = 'none';
                     
                     document.getElementById('selectedFile').textContent = `✅ ${file.name}`;
                 } else {
@@ -1918,49 +1879,19 @@
         };
 
         alert('열 설정이 적용되었습니다. 당원 검색 탭에서 확인해주세요.');
-        saveDataToStorage();
-        if (currentData.length > 0) {
-            displayAllMembers();
-            updateStats();
-            updateCharts();
-        }
-    }
-    
-    function saveDataToStorage() {
-        if (currentData.length > 0) {
-            localStorage.setItem('memberData', JSON.stringify(currentData));
-            localStorage.setItem('columnSettings', JSON.stringify(columnSettings));
-        }
-        localStorage.setItem('users', JSON.stringify(window.users));
-    }
-    
-    function restoreDataFromStorage() {
-        const storedData = localStorage.getItem('memberData');
-        const storedSettings = localStorage.getItem('columnSettings');
-        const storedUsers = localStorage.getItem('users');
         
-        if (storedData) {
-            currentData = JSON.parse(storedData);
-            columnSettings = JSON.parse(storedSettings);
-            window.users = JSON.parse(storedUsers);
-            
-            updateCurrentFileInfo('복원된 데이터', currentData.length - 1);
-            nameColInput.value = columnSettings.name;
-            dobColInput.value = columnSettings.dob;
-            phoneColInput.value = columnSettings.phone || 0;
-            dongColInput.value = columnSettings.dong || 0;
-            
+        if (currentData.length > 0) {
             displayAllMembers();
             updateStats();
             updateCharts();
-            
-            document.getElementById('selectedFile').textContent = '💾 이전에 저장된 데이터';
-            restoreSection.style.display = 'none';
-            alert('✅ 이전에 저장된 데이터가 성공적으로 복원되었습니다.');
-        } else {
-            alert('❌ 복원할 데이터가 없습니다.');
         }
     }
+    
+    // 로컬 저장소에 저장하는 함수 제거
+    // function saveDataToStorage() { ... }
+    
+    // 로컬 저장소에서 복원하는 함수 제거
+    // function restoreDataFromStorage() { ... }
 
     function filterMembers() {
         if (currentData.length <= 1) {
@@ -2353,19 +2284,28 @@
     
     // --- 초기 실행 ---
     document.addEventListener('DOMContentLoaded', () => {
-        const storedUsers = localStorage.getItem('users');
-        if (storedUsers) {
+        // Firebase에서 사용자 정보를 불러오는 비동기 함수
+        const loadUsers = async () => {
             try {
-                users = JSON.parse(storedUsers);
-            } catch (e) {
-                console.error("Failed to parse users from localStorage, resetting to default.", e);
-                users = { 'admin': { password: 'admin', permissions: ['admin', 'edit'] } };
+                // `loadUsersFromFirebase` 함수는 정의된 후에 호출되어야 함
+                // 여기서는 모듈 스크립트가 로드될 때까지 기다려야 함
+                if (typeof window.loadUsersFromFirebase === 'function') {
+                    await window.loadUsersFromFirebase();
+                } else {
+                    console.warn('loadUsersFromFirebase 함수가 아직 정의되지 않았습니다. 잠시 후 재시도합니다.');
+                    setTimeout(loadUsers, 500);
+                    return;
+                }
+            } catch (error) {
+                console.error('Firebase 사용자 정보 로드 실패. 기본 관리자 계정으로 초기화합니다.', error);
+                // Firebase 로드 실패 시 기본 관리자 계정으로 대체
+                window.users = { 'admin': { password: 'admin', permissions: ['admin', 'edit'] } };
             }
-        } else {
-            users = { 'admin': { password: 'admin', permissions: ['admin', 'edit'] } };
-        }
-        
-        checkLoginState();
+        };
+
+        // 페이지 로드 시 사용자 정보 로드를 시도
+        loadUsers();
+
         updateStats(); // 초기 통계 업데이트 (0으로)
         updateCharts(); // 초기 차트 업데이트 (비어있음)
     });
