@@ -1976,7 +1976,8 @@ function displayFilteredMembers() {
         const container = document.createElement('div');
         container.className = `member-item ${isDuplicate ? 'duplicate' : ''}`;
         
-        // **오류의 원인인 onclick 속성 대신 data-member-key 속성을 사용합니다.**
+        // 오류의 원인인 onclick 속성을 제거하고,
+        // 대신 data-member-key 속성에 키를 저장합니다.
         container.dataset.memberKey = key;
 
         const nameEl = document.createElement('div');
@@ -2014,7 +2015,7 @@ function displayFilteredMembers() {
     addMemberItemListeners();
 }
 
-// displayFilteredMembers 함수 바로 아래에 추가하세요.
+
 function addMemberItemListeners() {
     document.querySelectorAll('.member-item').forEach(item => {
         item.addEventListener('click', (event) => {
@@ -2023,8 +2024,9 @@ function addMemberItemListeners() {
         });
     });
 }
-    
-   function showMemberDetailByKey(key) {
+
+
+function showMemberDetailByKey(key) {
     const members = memberMap.get(key);
     if (members) {
         showMemberDetail(members);
