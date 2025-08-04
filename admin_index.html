@@ -2152,24 +2152,9 @@
             } else {
                 console.log('로그인 실패. 사용자 정보:', users[username]);
                 
-   if (username === 'admin') {
-                    const resetConfirm = confirm(
-                        '❌ 로그인 실패\n\n' +
-                        'admin 계정 로그인에 실패했습니다.\n\n' +
-                        '원인:\n' +
-                        '• 비밀번호가 변경되었거나\n' +
-                        '• 저장된 데이터에 문제가 있을 수 있습니다\n\n' +
-                        '✅ 확인: admin 계정을 기본값(admin/admin)으로 초기화\n' +
-                        '❌ 취소: 다시 시도'
-                    );
-                    
-                    if (resetConfirm) {
-                        resetAdminAccount();
-                        return;
-                    }
-                }
-                
-                alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.\n\n💡 최초 사용 시: admin / admin');
+  if (username === 'admin') {
+                alert('❌ 로그인 실패\n\n' + 'admin 계정 로그인에 실패했습니다.\n' + '비밀번호를 다시 확인해주세요.');
+                return false;
             }
         }
         // 로그아웃 함수
