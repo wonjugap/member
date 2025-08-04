@@ -268,52 +268,81 @@
             });
         };
         
-// window.firebaseLogin 함수 (수정)
-window.firebaseLogin = async function(username, password) {
-    // ... 기존 코드 ...
+        // window.firebaseLogin 함수 (수정)
+        window.firebaseLogin = async function(username, password) {
+            console.log('firebaseLogin 호출됨');
+            const loginStatusEl = document.getElementById('loginStatus');
+            loginStatusEl.style.display = 'none';
+            loginStatusEl.textContent = '';
+            
+            if (!isFirebaseReady || !db) {
+                console.error('❌ Firebase가 초기화되지 않았습니다.');
+                loginStatusEl.textContent = '❌ Firebase 연결 오류. 페이지를 새로고침해주세요.';
+                loginStatusEl.style.display = 'block';
+                return;
+            }
 
-    try {
-        // ... 기존 인증 로직 ...
-        
-        console.log('✅ Firestore 사용자 인증 성공!');
-        window.currentUser = username;
-        window.currentUserPermissions = user.permissions;
-        document.getElementById('current-user').textContent = `환영합니다, ${window.currentUser}님!`;
-        
-        // --- 이 부분을 추가/확인해주세요 ---
-        const loginScreen = document.getElementById('login-screen');
-        const mainApp = document.getElementById('main-app');
+            try {
+                const usersDoc = await getDoc(doc(db, 'system', 'users'));
+                if (!usersDoc.exists()) {
+                    throw new Error('사용자 데이터가 Firestore에 없습니다.');
+                }
+                const users = usersDoc.data().users;
+                const user = users[username];
 
-        console.log(`🔒 로그인 화면 요소:`, loginScreen);
-        console.log(`🚀 메인 앱 화면 요소:`, mainApp);
+                if (!user) {
+                    throw new Error('존재하지 않는 사용자입니다.');
+                }
 
-        if (loginScreen) {
-            loginScreen.style.display = 'none';
-            console.log('✅ 로그인 화면을 숨겼습니다.');
-        } else {
-            console.error('❌ id="login-screen" 요소를 찾을 수 없습니다.');
-        }
+                if (user.password !== password) {
+                    throw new Error('비밀번호가 일치하지 않습니다.');
+                }
+                
+                console.log('✅ Firestore 사용자 인증 성공!');
+                window.currentUser = username;
+                window.currentUserPermissions = user.permissions;
+                const currentUserEl = document.getElementById('current-user');
+                if (currentUserEl) {
+                    currentUserEl.textContent = `환영합니다, ${window.currentUser}님!`;
+                }
+                
+                const loginScreen = document.getElementById('login-screen');
+                const mainApp = document.getElementById('main-app');
 
-        if (mainApp) {
-            mainApp.style.display = 'block';
-            console.log('✅ 메인 앱 화면을 표시했습니다.');
-        } else {
-            console.error('❌ id="main-app" 요소를 찾을 수 없습니다.');
-        }
-        
-        // ... 기존 코드 ...
-    } catch (error) {
-        // ... 기존 에러 처리 코드 ...
-    }
-};
+                if (loginScreen) {
+                    loginScreen.style.display = 'none';
+                    console.log('✅ 로그인 화면을 숨겼습니다.');
+                } else {
+                    console.error('❌ id="login-screen" 요소를 찾을 수 없습니다.');
+                }
+
+                if (mainApp) {
+                    mainApp.style.display = 'block';
+                    console.log('✅ 메인 앱 화면을 표시했습니다.');
+                } else {
+                    console.error('❌ id="main-app" 요소를 찾을 수 없습니다.');
+                }
+                
+                window.updateSystemAfterLogin();
+            } catch (error) {
+                console.error('❌ 로그인 실패:', error);
+                loginStatusEl.textContent = `❌ 로그인 실패: ${error.message}`;
+                loginStatusEl.style.display = 'block';
+            }
+        };
 
         window.firebaseLogout = function() {
             console.log('로그아웃 처리 중...');
             window.currentUser = null;
             window.currentUserPermissions = [];
-            document.getElementById('current-user').textContent = '';
-            document.getElementById('login-screen').style.display = 'block';
-            document.getElementById('main-app').style.display = 'none';
+            const currentUserEl = document.getElementById('current-user');
+            if (currentUserEl) {
+                 currentUserEl.textContent = '';
+            }
+            const loginScreen = document.getElementById('login-screen');
+            const mainApp = document.getElementById('main-app');
+            if (loginScreen) loginScreen.style.display = 'block';
+            if (mainApp) mainApp.style.display = 'none';
             alert('✅ 로그아웃되었습니다.');
         };
 
@@ -477,6 +506,56 @@ window.firebaseLogin = async function(username, password) {
                 });
             });
         };
+
+        window.displayAllMembers = function() {
+            // 이 함수는 실제 데이터가 로드된 후에 호출될 것으로 예상되는 더미 함수입니다.
+            console.log('당원 데이터를 테이블에 표시합니다.');
+        };
+
+        window.saveDataToStorage = function() {
+            // 이 함수는 로컬 스토리지에 데이터를 저장하는 더미 함수입니다.
+            console.log('현재 데이터를 로컬 스토리지에 저장합니다.');
+        };
+
+        window.updateSystemAfterDataLoad = function() {
+            // 이 함수는 데이터 로드 후 대시보드를 업데이트하는 더미 함수입니다.
+            console.log('데이터 로드 후 시스템을 업데이트합니다.');
+        };
+
+        window.displayHeaderInfo = function(headers) {
+            // 이 함수는 헤더 정보를 표시하는 더미 함수입니다.
+            console.log('헤더 정보:', headers);
+        };
+
+        window.updateCurrentFileInfo = function(filename, count) {
+            // 이 함수는 현재 파일 정보를 업데이트하는 더미 함수입니다.
+            console.log(`파일 정보 업데이트: ${filename}, ${count}명`);
+        };
+        
+        window.calculateAge = function(dob) {
+            // 더미 나이 계산 함수
+            if (!dob) return 0;
+            const birthDate = new Date(dob);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        };
+        
+        window.getAgeGroup = function(age) {
+            // 더미 연령대 그룹 함수
+            if (age < 20) return '10대';
+            if (age < 30) return '20대';
+            if (age < 40) return '30대';
+            if (age < 50) return '40대';
+            if (age < 60) return '50대';
+            if (age < 70) return '60대';
+            return '70대 이상';
+        };
+
         console.log('✅ Firebase 함수들이 안전하게 정의되었습니다.');
     }
 
