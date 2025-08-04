@@ -31,7 +31,7 @@
     let isFirebaseReady = false;
     let connectionRetryCount = 0;
     const maxRetries = 3;
-    let users = {}; // 전역 변수로 사용자 데이터 저장
+    let users = {};
 
     function safeCallFunction(functionName, ...args) {
         try {
@@ -181,7 +181,8 @@
             }, 100);
             console.log('✅ Firebase 함수들이 전역으로 노출되었습니다');
             startConnectionMonitoring();
-            startAuthMonitoring();
+            // Firestore 기반 인증에서는 onAuthStateChanged를 사용하지 않습니다.
+            // startAuthMonitoring(); 
         } catch (error) {
             console.error('❌ Firebase 초기화 실패:', error);
             isFirebaseReady = false;
@@ -194,37 +195,6 @@
         }
     }
 
-// 권한에 따라 UI 요소를 숨기거나 표시하는 함수
-function checkPermissions() {
-    console.log('권한 확인 중...');
-    // 여기에 권한 확인 로직을 추가합니다.
-    // 예시:
-    // const adminUI = document.getElementById('admin-specific-ui');
-    // if (window.currentUserPermissions && window.currentUserPermissions.includes('admin')) {
-    //     if (adminUI) adminUI.style.display = 'block';
-    // } else {
-    //     if (adminUI) adminUI.style.display = 'none';
-    // }
-    
-    // (필요에 따라 다른 권한 관련 UI 요소를 제어하는 코드를 추가합니다.)
-    console.log(`현재 사용자: ${window.currentUser}, 권한: ${window.currentUserPermissions}`);
-}
-window.checkPermissions = checkPermissions;
-
-// 로그인 후 시스템을 업데이트하는 함수
-function updateSystemAfterLogin() {
-    console.log('로그인 후 시스템 상태 업데이트...');
-    // 필요한 로직 추가
-}
-window.updateSystemAfterLogin = updateSystemAfterLogin;
-
-// 로컬 스토리지에서 데이터를 불러오는 함수
-function loadDataFromStorage() {
-    console.log('로컬 스토리지에서 데이터 불러오기...');
-    // 필요한 로직 추가
-}
-window.loadDataFromStorage = loadDataFromStorage;    
-    
     async function performConnectionTest() {
         try {
             const testRef = doc(db, 'system', 'connectionTest');
@@ -246,6 +216,27 @@ window.loadDataFromStorage = loadDataFromStorage;
     }
 
     function defineFirebaseFunctions() {
+        // 모든 관련 함수들을 이 블록 안에서 정의하여 전역적으로 접근 가능하도록 합니다.
+
+        // 권한에 따라 UI 요소를 숨기거나 표시하는 함수
+        window.checkPermissions = function() {
+            console.log('권한 확인 중...');
+            // 여기에 권한 확인 로직을 추가합니다.
+            console.log(`현재 사용자: ${window.currentUser}, 권한: ${window.currentUserPermissions}`);
+        };
+
+        // 로그인 후 시스템을 업데이트하는 함수
+        window.updateSystemAfterLogin = function() {
+            console.log('로그인 후 시스템 상태 업데이트...');
+            // 필요한 로직 추가
+        };
+
+        // 로컬 스토리지에서 데이터를 불러오는 함수
+        window.loadDataFromStorage = function() {
+            console.log('로컬 스토리지에서 데이터 불러오기...');
+            // 필요한 로직 추가
+        };
+
         // Firestore에서 사용자 정보 로드
         window.loadUsersFromFirebase = function() {
             return new Promise((resolve, reject) => {
@@ -259,7 +250,7 @@ window.loadDataFromStorage = loadDataFromStorage;
                     if (docSnapshot.exists()) {
                         const data = docSnapshot.data();
                         if (data.users) {
-                            users = data.users; // 전역 users 변수에 저장
+                            users = data.users;
                             console.log(`✅ Firestore에서 사용자 정보를 불러왔습니다. (${Object.keys(users).length}명)`);
                             resolve(true);
                         } else {
@@ -289,7 +280,6 @@ window.loadDataFromStorage = loadDataFromStorage;
                 // 먼저 Firestore에서 모든 사용자 정보를 불러옴
                 await window.loadUsersFromFirebase();
 
-                // 입력된 username으로 사용자 데이터 확인
                 const user = users[username];
 
                 if (!user) {
@@ -299,13 +289,14 @@ window.loadDataFromStorage = loadDataFromStorage;
                     throw new Error('비밀번호가 일치하지 않습니다.');
                 }
                 
-                // 로그인 성공 처리
                 console.log('✅ Firestore 사용자 인증 성공!');
                 window.currentUser = username;
                 window.currentUserPermissions = user.permissions;
                 document.getElementById('current-user').textContent = `환영합니다, ${window.currentUser}님!`;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'block';
+                
+                // 함수들이 모두 window 객체에 할당되었으므로 이제 안전하게 호출 가능
                 window.checkPermissions();
                 if (window.updateSystemAfterLogin) {
                     window.updateSystemAfterLogin();
@@ -647,12 +638,6 @@ window.loadDataFromStorage = loadDataFromStorage;
             if (window.updateFirebaseStatus) { window.updateFirebaseStatus(false, '오프라인 모드 (로컬 저장소만 사용)'); }
             if (window.showOfflineNotice) { window.showOfflineNotice(); }
         }, 100);
-        
-    }
-
-    function startAuthMonitoring() {
-        // Firestore 기반 인증은 onAuthStateChanged를 사용하지 않습니다.
-        // 대신, 로그인 성공 후 상태를 수동으로 업데이트합니다.
     }
 
     console.log('🚀 Firebase 초기화 시작...');
