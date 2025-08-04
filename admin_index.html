@@ -459,27 +459,29 @@
             };
 
             // Firebase 로그인
-            window.firebaseLogin = async function(email, password) {
+            window.firebaseLogin = async function(username, password) {
                 if (!window.checkFirebaseConnection()) {
                     alert('❌ 로그인 실패: 오프라인 모드에서는 로그인할 수 없습니다.');
                     return;
                 }
-                const loginForm = document.getElementById('loginForm');
                 const loginStatusEl = document.getElementById('loginStatus');
                 loginStatusEl.textContent = '로그인 중...';
+                
+                // Firebase Auth는 이메일 형식의 계정을 요구하므로, 사용자 ID에 도메인을 추가하여 이메일 형식으로 변환합니다.
+                const loginEmail = username + '@wonju.com';
 
                 try {
-                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
                     const user = userCredential.user;
                     console.log('✅ Firebase Auth 로그인 성공:', user.uid);
                     await loadAndValidateUser(user.email);
                 } catch (error) {
                     console.error('❌ 로그인 오류:', error);
-                    let errorMessage = '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.';
+                    let errorMessage = '로그인에 실패했습니다. 사용자 ID와 비밀번호를 확인해주세요.';
                     if (error.code === 'auth/invalid-email') {
-                        errorMessage = '유효하지 않은 이메일 형식입니다.';
+                        errorMessage = '유효하지 않은 사용자 ID 형식입니다.';
                     } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                        errorMessage = '이메일 또는 비밀번호가 잘못되었습니다.';
+                        errorMessage = '사용자 ID 또는 비밀번호가 잘못되었습니다.';
                     } else if (error.code === 'auth/network-request-failed') {
                         errorMessage = '네트워크 오류입니다. 연결 상태를 확인해주세요.';
                     }
@@ -489,10 +491,11 @@
             };
 
             // 사용자 정보 Firestore에서 불러오고 유효성 검사
-            async function loadAndValidateUser(email) {
+            async function loadAndValidateUser(loginEmail) {
                 try {
                     await window.loadUsersFromFirebase();
-                    const username = email.split('@')[0];
+                    // Firebase 이메일에서 사용자 ID 추출
+                    const username = loginEmail.split('@')[0];
                     if (window.users && window.users[username]) {
                         window.currentUser = username;
                         window.currentUserPermissions = window.users[username].permissions;
@@ -522,7 +525,7 @@
                     window.currentUser = null;
                     window.currentUserPermissions = [];
                     document.getElementById('current-user').textContent = '';
-                    document.getElementById('loginForm').style.display = 'block';
+                    document.getElementById('login-screen').style.display = 'block';
                     document.getElementById('main-app').style.display = 'none';
                     alert('✅ 로그아웃되었습니다.');
                 } catch (error) {
@@ -534,9 +537,9 @@
             // 로그인 폼 제출 이벤트 핸들러
             window.handleLoginSubmit = function(event) {
                 event.preventDefault();
-                const email = document.getElementById('username').value + '@wonju.com';
+                const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
-                window.firebaseLogin(email, password);
+                window.firebaseLogin(username, password);
             };
 
             console.log('✅ Firebase 함수들이 안전하게 정의되었습니다.');
@@ -690,6 +693,7 @@
                     console.log('User is signed in:', user.uid);
                     document.getElementById('login-screen').style.display = 'none';
                     document.getElementById('main-app').style.display = 'block';
+                    // Firebase 이메일에서 사용자 ID 추출
                     window.currentUser = user.email.split('@')[0];
                     document.getElementById('current-user').textContent = `환영합니다, ${window.currentUser}님!`;
                     // Firestore에서 사용자 권한 정보 로드
