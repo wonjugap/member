@@ -734,13 +734,13 @@
     import { connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     // Firebase 프로젝트 설정
-    const firebaseConfig = {
-        apiKey: "AIzaSyAFAsd9XBblWD1G2vVrP48T9IQqwWoDZro", // 실제 API 키로 교체하세요.
-        authDomain: "wonju-minjoo-member-system.firebaseapp.com",
-        projectId: "wonju-minjoo-member-system",
-        storageBucket: "wonju-minjoo-member-system.firebasestorage.app",
-        messagingSenderId: "227156177261",
-        appId: "1:227156177261:web:9f37ea54dab14265c2aa64"
+      const firebaseConfig = {
+            apiKey: "AIzaSyAFAsd9XBblWD1G2vVrP48T9IQqwWoDZro",
+            authDomain: "wonju-minjoo-member-system.firebaseapp.com",
+            projectId: "wonju-minjoo-member-system",
+            storageBucket: "wonju-minjoo-member-system.firebasestorage.app",
+            messagingSenderId: "227156177261",
+            appId: "1:227156177261:web:9f37ea54dab14265c2aa64"
     };
 
     let app, auth, db;
@@ -856,7 +856,7 @@
 
     async function startFirebaseConnection() {
         try {
-            if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "AIzaSyAFAsd9XBblWD1G2vVrP48T9IQqwWoDZro") {
                 throw new Error('Firebase 설정이 필요합니다. firebaseConfig를 실제 프로젝트 설정으로 교체하세요.');
             }
             app = initializeApp(firebaseConfig);
@@ -1496,6 +1496,20 @@
         const logoutButton = document.getElementById('logout-btn');
         if (logoutButton) {
             logoutButton.addEventListener('click', window.firebaseLogout);
+        }
+
+        const loadFromFirebaseBtn = document.getElementById('loadFromFirebaseBtn');
+        if (loadFromFirebaseBtn) {
+            loadFromFirebaseBtn.addEventListener('click', () => {
+                safeCallFunction('loadMemberDataFromFirebase');
+            });
+        }
+        
+        const syncToFirebaseBtn = document.getElementById('syncToFirebaseBtn');
+        if (syncToFirebaseBtn) {
+            syncToFirebaseBtn.addEventListener('click', () => {
+                safeCallFunction('syncMemberDataToFirebase');
+            });
         }
     });
 
