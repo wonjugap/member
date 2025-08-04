@@ -1558,7 +1558,53 @@
         window.openTab = function(event, tabName) { console.log(`openTab 함수 호출됨: ${tabName}`); }
         window.applyColumnSettings = function() { console.log('applyColumnSettings 함수 호출됨'); }
         window.filterUserList = function() { console.log('filterUserList 함수 호출됨'); }
-        window.login = function() { console.log('login 함수 호출됨'); }
+        window.login = function() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorEl = document.getElementById('loginError');
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+
+    // ❗️ 수정된 부분: 로컬 관리자 계정 추가
+    const LOCAL_ADMIN = {
+        username: 'admin',
+        password: 'password123', // ❗️ 비밀번호를 평문으로 저장하면 보안에 취약합니다.
+        permissions: ['full_access']
+    };
+
+    // 로컬 관리자 계정으로 로그인 시도
+    if (username === LOCAL_ADMIN.username && password === LOCAL_ADMIN.password) {
+        console.log('로컬 관리자 로그인 성공');
+        window.currentUser = LOCAL_ADMIN;
+        loginSuccess();
+        return;
+    }
+
+    // Firebase에서 불러온 사용자 데이터로 로그인 시도 (기존 로직)
+    if (window.users[username]) {
+        // 보안 경고: 비밀번호가 해시되지 않고 평문으로 비교됩니다.
+        if (window.users[username].password === password) {
+            console.log('Firebase 사용자 로그인 성공');
+            window.currentUser = window.users[username];
+            loginSuccess();
+        } else {
+            errorEl.textContent = '잘못된 비밀번호입니다.';
+            errorEl.style.display = 'block';
+        }
+    } else {
+        errorEl.textContent = '잘못된 사용자 ID입니다.';
+        errorEl.style.display = 'block';
+    }
+}
+
+function loginSuccess() {
+    // 성공 시 UI 업데이트 (기존과 동일)
+    document.getElementById('loginModal').style.display = 'none';
+    document.querySelector('.main-app').style.display = 'block';
+    document.getElementById('currentUser').textContent = `환영합니다, ${window.currentUser.username}님!`;
+    document.getElementById('currentUser').setAttribute('data-username', window.currentUser.username);
+    // ... 이하 기존 loginSuccess 로직
+}
         window.logout = function() { console.log('logout 함수 호출됨'); }
         window.restoreDataFromStorage = function() { console.log('restoreDataFromStorage 함수 호출됨'); }
     </script>
