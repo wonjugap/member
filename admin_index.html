@@ -716,7 +716,7 @@
                         row[data.columnSettings.phone - 1] = member.phone || '';
                     }
                     if (data.columnSettings.dong > 0) {
-                        row[data.columnSettings.dong - 1] = member.dong || '';
+                        row[data.columnSettings.phone - 1] = member.dong || '';
                     }
                 }
                 
@@ -907,17 +907,6 @@
 
         .logout-btn:hover {
             background: #c82333;
-        }
-
-        .header h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .header p {
-            color: #7f8c8d;
-            font-size: 1.2em;
         }
 
         .login-screen {
@@ -1213,6 +1202,7 @@
             margin-bottom: 10px;
             border-left: 4px solid #007bff;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .member-item:hover {
@@ -1663,6 +1653,7 @@
     let currentUser = null;
     let ageChartInstance = null;
     let dongChartInstance = null;
+    let memberMap = new Map();
 
     // --- HTML 요소 캐싱 ---
     const loginScreen = document.getElementById('loginScreen');
@@ -1763,6 +1754,7 @@
     function clearData() {
         currentData = [];
         filteredData = [];
+        memberMap = new Map();
         updateCurrentFileInfo('파일 없음', 0);
         searchResultsDiv.innerHTML = '<p class="no-data">파일을 업로드하거나 클라우드 데이터를 불러오세요.</p>';
         updateStats();
@@ -1964,7 +1956,7 @@
             return;
         }
 
-        const memberMap = new Map();
+        memberMap = new Map();
         
         filteredData.forEach(row => {
             const name = (row[columnSettings.name - 1] || '').toString().trim();
@@ -1983,7 +1975,7 @@
             const isDuplicate = members.length > 1;
             const container = document.createElement('div');
             container.className = `member-item ${isDuplicate ? 'duplicate' : ''}`;
-            container.setAttribute('onclick', `showMemberDetail(${JSON.stringify(members).replace(/'/g, "\\'")})`);
+            container.setAttribute('onclick', `showMemberDetailByKey('${key}')`);
 
             const nameEl = document.createElement('div');
             nameEl.className = 'member-name';
@@ -2015,6 +2007,16 @@
             container.appendChild(detailsEl);
             searchResultsDiv.appendChild(container);
         });
+    }
+
+    function showMemberDetailByKey(key) {
+        const members = memberMap.get(key);
+        if (members) {
+            showMemberDetail(members);
+        } else {
+            console.error('해당 키를 가진 당원 데이터가 없습니다:', key);
+            alert('오류: 당원 상세 정보를 불러올 수 없습니다.');
+        }
     }
 
     function showMemberDetail(members) {
