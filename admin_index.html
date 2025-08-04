@@ -1946,78 +1946,78 @@
         displayFilteredMembers();
     }
 
-    function displayFilteredMembers() {
-        searchResultsDiv.innerHTML = '';
-        
-        searchCountInfo.textContent = `총 ${currentData.length - 1}명의 데이터 중 ${filteredData.length}명 표시`;
+function displayFilteredMembers() {
+    searchResultsDiv.innerHTML = '';
 
-        if (filteredData.length === 0) {
-            searchResultsDiv.innerHTML = '<p class="no-data">검색 결과가 없습니다.</p>';
-            return;
-        }
+    searchCountInfo.textContent = `총 ${currentData.length - 1}명의 데이터 중 ${filteredData.length}명 표시`;
 
-        memberMap = new Map();
-        
-        filteredData.forEach(row => {
-            const name = (row[columnSettings.name - 1] || '').toString().trim();
-            const dob = (row[columnSettings.dob - 1] || '').toString().trim();
-            
-            if (!name) return;
-            
-            const key = `${name}_${dob}`;
-            if (!memberMap.has(key)) {
-                memberMap.set(key, []);
-            }
-            memberMap.get(key).push(row);
-        });
-
-        memberMap.forEach((members, key) => {
-            const isDuplicate = members.length > 1;
-            const container = document.createElement('div');
-            container.className = `member-item ${isDuplicate ? 'duplicate' : ''}`;
-            container.setAttribute('onclick', `showMemberDetailByKey('${key}')`);
-
-            const nameEl = document.createElement('div');
-            nameEl.className = 'member-name';
-            nameEl.textContent = members[0][columnSettings.name - 1];
-            
-            const detailsEl = document.createElement('div');
-            detailsEl.className = 'member-details';
-            
-            const dob = members[0][columnSettings.dob - 1];
-            detailsEl.innerHTML += `생년월일: ${dob}<br>`;
-            detailsEl.innerHTML += `나이: ${calculateAge(dob)}세 (${getAgeGroup(calculateAge(dob))})<br>`;
-            detailsEl.innerHTML += `성별: ${isMale(dob) ? '남성' : '여성'}<br>`;
-            if (columnSettings.dong > 0) {
-                detailsEl.innerHTML += `읍면동: ${members[0][columnSettings.dong - 1] || '-'}<br>`;
-            }
-            if (columnSettings.phone > 0) {
-                detailsEl.innerHTML += `전화번호: ${members[0][columnSettings.phone - 1] || '-'}`;
-            }
-
-            if (isDuplicate) {
-                const duplicateCount = document.createElement('span');
-                duplicateCount.style.color = '#dc3545';
-                duplicateCount.style.fontWeight = 'bold';
-                duplicateCount.textContent = ` (중복 ${members.length}건)`;
-                nameEl.appendChild(duplicateCount);
-            }
-            
-            container.appendChild(nameEl);
-            container.appendChild(detailsEl);
-            searchResultsDiv.appendChild(container);
-        });
+    if (filteredData.length === 0) {
+        searchResultsDiv.innerHTML = '<p class="no-data">검색 결과가 없습니다.</p>';
+        return;
     }
 
-    function showMemberDetailByKey(key) {
-        const members = memberMap.get(key);
-        if (members) {
-            showMemberDetail(members);
-        } else {
-            console.error('해당 키를 가진 당원 데이터가 없습니다:', key);
-            alert('오류: 당원 상세 정보를 불러올 수 없습니다.');
+    memberMap = new Map();
+
+    filteredData.forEach(row => {
+        const name = (row[columnSettings.name - 1] || '').toString().trim();
+        const dob = (row[columnSettings.dob - 1] || '').toString().trim();
+
+        if (!name) return;
+
+        const key = `${name}_${dob}`;
+        if (!memberMap.has(key)) {
+            memberMap.set(key, []);
         }
+        memberMap.get(key).push(row);
+    });
+
+    memberMap.forEach((members, key) => {
+        const isDuplicate = members.length > 1;
+        const container = document.createElement('div');
+        container.className = `member-item ${isDuplicate ? 'duplicate' : ''}`;
+        container.setAttribute('onclick', `showMemberDetailByKey('${key}')`); // 이 부분을 수정했습니다.
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'member-name';
+        nameEl.textContent = members[0][columnSettings.name - 1];
+
+        const detailsEl = document.createElement('div');
+        detailsEl.className = 'member-details';
+
+        const dob = members[0][columnSettings.dob - 1];
+        detailsEl.innerHTML += `생년월일: ${dob}<br>`;
+        detailsEl.innerHTML += `나이: ${calculateAge(dob)}세 (${getAgeGroup(calculateAge(dob))})<br>`;
+        detailsEl.innerHTML += `성별: ${isMale(dob) ? '남성' : '여성'}<br>`;
+        if (columnSettings.dong > 0) {
+            detailsEl.innerHTML += `읍면동: ${members[0][columnSettings.dong - 1] || '-'}<br>`;
+        }
+        if (columnSettings.phone > 0) {
+            detailsEl.innerHTML += `전화번호: ${members[0][columnSettings.phone - 1] || '-'}`;
+        }
+
+        if (isDuplicate) {
+            const duplicateCount = document.createElement('span');
+            duplicateCount.style.color = '#dc3545';
+            duplicateCount.style.fontWeight = 'bold';
+            duplicateCount.textContent = ` (중복 ${members.length}건)`;
+            nameEl.appendChild(duplicateCount);
+        }
+
+        container.appendChild(nameEl);
+        container.appendChild(detailsEl);
+        searchResultsDiv.appendChild(container);
+    });
+}
+
+   function showMemberDetailByKey(key) {
+    const members = memberMap.get(key);
+    if (members) {
+        showMemberDetail(members);
+    } else {
+        console.error('해당 키를 가진 당원 데이터가 없습니다:', key);
+        alert('오류: 당원 상세 정보를 불러올 수 없습니다.');
     }
+}
 
     function showMemberDetail(members) {
         const modal = document.getElementById('memberDetailModal');
