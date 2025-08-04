@@ -554,7 +554,7 @@
 
         <div id="main-app" class="main-app" style="display: none;">
             <div class="nav-tabs">
-                <button class="tab-btn active" data-tab-target="dashboardTab">대시보드</button>
+                <button class="tab-btn" data-tab-target="dashboardTab">대시보드</button>
                 <button class="tab-btn" data-tab-target="memberTab">당원관리</button>
                 <button class="tab-btn" data-tab-target="fileTab">파일관리</button>
                 <button class="tab-btn" data-tab-target="settingsTab">사용자관리</button>
@@ -563,7 +563,7 @@
             </div>
 
             <div class="tab-content">
-                <div id="dashboardTab" class="tab-pane active">
+                <div id="dashboardTab" class="tab-pane">
                     <div class="welcome-message">
                         <h2>대시보드</h2>
                         <p>시스템에 오신 것을 환영합니다! 아래에서 당원 데이터 현황을 확인하세요.</p>
@@ -931,6 +931,36 @@
         }
     }
 
+    // 새롭게 추가된 탭 설정 함수
+    function setupTabs() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+
+        const activateTab = (targetId) => {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+
+            const targetButton = document.querySelector(`[data-tab-target="${targetId}"]`);
+            const targetPane = document.getElementById(targetId);
+
+            if (targetButton) targetButton.classList.add('active');
+            if (targetPane) targetPane.classList.add('active');
+        };
+
+        // 초기 탭 활성화 (대시보드 탭)
+        activateTab('dashboardTab');
+
+        // 탭 버튼에 이벤트 리스너 추가
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTabId = button.dataset.tabTarget;
+                activateTab(targetTabId);
+            });
+        });
+
+        console.log('✅ 탭 초기화 및 이벤트 리스너 설정 완료');
+    }
+
     function defineFirebaseFunctions() {
         // 모든 관련 함수들을 이 블록 안에서 정의하여 전역적으로 접근 가능하도록 합니다.
 
@@ -941,10 +971,12 @@
             console.log(`현재 사용자: ${window.currentUser}, 권한: ${window.currentUserPermissions}`);
         };
 
-        // 로그인 후 시스템을 업데이트하는 함수
+        // 로그인 후 시스템을 업데이트하는 함수 (setupTabs() 호출 추가)
         window.updateSystemAfterLogin = function() {
             console.log('로그인 후 시스템 상태 업데이트...');
-            // 필요한 로직 추가
+            // 탭 초기화 함수 호출
+            setupTabs();
+            // 다른 필요한 로직 추가
         };
 
         // 로컬 스토리지에서 데이터를 불러오는 함수
