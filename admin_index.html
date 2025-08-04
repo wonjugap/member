@@ -2152,7 +2152,7 @@
             } else {
                 console.log('로그인 실패. 사용자 정보:', users[username]);
                 
-          if (username === 'admin') {
+                 if (username === 'admin') {
                     const resetConfirm = confirm(
                         '❌ 로그인 실패\n\n' +
                         'admin 계정 로그인에 실패했습니다.\n\n' +
@@ -2167,7 +2167,11 @@
                         resetAdminAccount();
                         return;
                     }
-             }
+                }
+                
+                alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.\n\n💡 최초 사용 시: admin / admin');
+            }
+        }
 
                 // 로그아웃 함수
         function logout() {
