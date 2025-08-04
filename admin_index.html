@@ -2171,7 +2171,7 @@ function showMemberDetailByKey(key) {
         avgAgeStat.textContent = avgAge;
     }
     
-    function updateCharts() {
+function updateCharts() {
         if (currentData.length <= 1) {
             if (ageChartInstance) ageChartInstance.destroy();
             if (dongChartInstance) dongChartInstance.destroy();
@@ -2179,11 +2179,19 @@ function showMemberDetailByKey(key) {
         }
 
         const members = currentData.slice(1);
-        const ageGroups = { '20s': 0, '30s': 0, '40s': 0, '50s': 0, '60s': 0, '70s+': 0, '기타': 0 };
+        const ageGroups = {
+            '20대': 0,
+            '30대': 0,
+            '40대': 0,
+            '50대': 0,
+            '60대': 0,
+            '70대+': 0,
+            '기타': 0
+        };
         const dongCounts = {};
-        
+
         members.forEach(row => {
-            const dob = row[columnSettings.dob - 1];
+            const dob = row[columnSettings.dob - 1] || '';
             const age = calculateAge(dob);
             const ageGroup = getAgeGroup(age);
             if (ageGroups.hasOwnProperty(ageGroup)) {
@@ -2191,32 +2199,37 @@ function showMemberDetailByKey(key) {
             } else {
                 ageGroups['기타']++;
             }
-            
+
             if (columnSettings.dong > 0) {
                 const dong = (row[columnSettings.dong - 1] || '기타').toString().trim();
                 dongCounts[dong] = (dongCounts[dong] || 0) + 1;
             }
         });
 
-        // 연령대 차트
-        const ageChartCtx = document.getElementById('ageChart').getContext('2d');
-        if (ageChartInstance) {
-            ageChartInstance.destroy();
-        }
-        ageChartInstance = new Chart(ageChartCtx, {
+        // 나이대별 차트
+        const ageCtx = document.getElementById('ageChart').getContext('2d');
+        if (ageChartInstance) ageChartInstance.destroy();
+        ageChartInstance = new Chart(ageCtx, {
             type: 'bar',
             data: {
                 labels: Object.keys(ageGroups),
                 datasets: [{
                     label: '당원 수',
                     data: Object.values(ageGroups),
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: '나이대별 당원 분포'
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true
@@ -2225,51 +2238,67 @@ function showMemberDetailByKey(key) {
             }
         });
 
-        // 읍면동 차트
-        const dongChartCtx = document.getElementById('dongChart').getContext('2d');
-        if (dongChartInstance) {
-            dongChartInstance.destroy();
-        }
-        const sortedDongs = Object.entries(dongCounts).sort(([,a], [,b]) => b - a).slice(0, 10);
-        dongChartInstance = new Chart(dongChartCtx, {
+        // 읍면동별 차트
+        const dongCtx = document.getElementById('dongChart').getContext('2d');
+        if (dongChartInstance) dongChartInstance.destroy();
+        const sortedDong = Object.entries(dongCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        dongChartInstance = new Chart(dongCtx, {
             type: 'pie',
             data: {
-                labels: sortedDongs.map(([dong]) => dong),
+                labels: sortedDong.map(d => d[0]),
                 datasets: [{
-                    label: '읍면동별 당원 수',
-                    data: sortedDongs.map(([, count]) => count),
+                    label: '당원 수',
+                    data: sortedDong.map(d => d[1]),
                     backgroundColor: [
-                        '#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8',
-                        '#6c757d', '#fd7e14', '#20c997', '#e83e8c', '#6f42c1'
+                        '#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f',
+                        '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ac'
                     ],
-                    borderWidth: 1
+                    hoverOffset: 4
                 }]
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: {
-                        position: 'right',
+                    legend: { position: 'right' },
+                    title: {
+                        display: true,
+                        text: '읍면동별 당원 분포 (상위 10개)'
                     }
                 }
             }
         });
     }
 
-    function updateFirebaseStatus(isConnected, message) {
-        if (isConnected) {
-            connectionIndicatorEl.classList.remove('disconnected');
-            connectionIndicatorEl.classList.add('connected');
-        } else {
-            connectionIndicatorEl.classList.remove('connected');
-            connectionIndicatorEl.classList.add('disconnected');
+    // 파일 로드 후 전체 시스템 상태를 업데이트하는 함수 (누락된 함수)
+    function updateSystemAfterDataLoad() {
+        if (currentData.length > 0) {
+            updateStats();
+            displayAllMembers();
+            const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+            if (activeTab === 'dataVisualization') {
+                updateCharts();
+            }
+            if (activeTab === 'memberSearch') {
+                filterMembers();
+            }
         }
-        connectionStatusTextEl.textContent = message;
     }
-    
+
+    // --- Firebase 연결 상태 UI 업데이트 함수 (누락된 함수) ---
+    function updateFirebaseStatus(isConnected, message) {
+        if (connectionIndicatorEl) {
+            connectionIndicatorEl.classList.remove('connected', 'disconnected');
+            connectionIndicatorEl.classList.add(isConnected ? 'connected' : 'disconnected');
+        }
+        if (connectionStatusTextEl) {
+            connectionStatusTextEl.textContent = message;
+        }
+        console.log(`📡 Firebase 상태: ${message}`);
+    }
+
+    // --- 오프라인 알림 함수 (누락된 함수) ---
     function showOfflineNotice() {
-        // 오프라인 모드 공지 표시 (필요에 따라 구현)
-        console.log('오프라인 모드입니다. 일부 기능이 제한될 수 있습니다.');
+        alert('⚠️ Firebase 연결에 실패했습니다.\n\n오프라인 모드로 전환되어 로컬 파일만 사용할 수 있습니다. 인터넷 연결을 확인하거나 관리자에게 문의하세요.');
     }
     
     function displayUserList() {
