@@ -2109,36 +2109,56 @@
 
 
 async function login() {
-    const email = document.getElementById('username').value.trim();
+    const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
 
-    if (!email || !password) {
+    if (!username || !password) {
         alert('아이디와 비밀번호를 모두 입력하세요.');
         return;
     }
 
+    if (!window.firebaseInitialized || !window.firebaseDB) {
+        alert('❌ Firebase 연결이 필요합니다.\n\n인터넷 연결과 Firebase 설정을 확인해주세요.');
+        return;
+    }
+
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        // Firestore에서 사용자 데이터 읽기
+        const docRef = doc(window.firebaseDB, 'system', 'users');
+        const docSnap = await getDoc(docRef);
 
-        console.log(`✅ ${user.email}님이 로그인했습니다.`);
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('currentUser').textContent = `${user.email}님 환영합니다!`;
-        document.getElementById('logoutBtn').style.display = 'block';
-
-        // 권한 관련 처리 필요 시 여기에 추가
-    } catch (error) {
-        const errorCode = error.code;
-        let alertMessage = '❌ 로그인 실패\n\아이디 또는 비밀번호가 올바르지 않습니다.';
-        if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password') {
-            alertMessage = '❌ 로그인 실패\n\n아이디 또는 비밀번호를 다시 확인해주세요.';
+        if (!docSnap.exists()) {
+            alert('❌ Firebase에 사용자 데이터가 없습니다.\n관리자에게 문의하세요.');
+            return;
         }
-        alert(alertMessage);
+
+        const data = docSnap.data();
+        const firebaseUsers = data.users || {};
+
+        if (firebaseUsers[username] && firebaseUsers[username].password === password) {
+            // 로그인 성공
+            window.currentUser = username;
+            console.log(`✅ Firebase 로그인 성공: ${username}`);
+
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('currentUser').style.display = 'block';
+            document.getElementById('currentUser').textContent = `${username}님 환영합니다!`;
+            document.getElementById('logoutBtn').style.display = 'block';
+
+            if (typeof applyPermissions === 'function') {
+                applyPermissions();
+            }
+        } else {
+            alert('❌ 로그인 실패\n\n아이디 또는 비밀번호를 다시 확인해주세요.');
+        }
+    } catch (error) {
+        console.error('Firebase 로그인 중 오류:', error);
+        alert(`❌ 로그인 중 오류 발생\n\n${error.message}`);
     }
 }
 
-document.getElementById('loginBtn').addEventListener('click', login);
+        document.getElementById('loginBtn').addEventListener('click', login);
 
         // 로그아웃 함수
         function logout() {
