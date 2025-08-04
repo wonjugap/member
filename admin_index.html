@@ -1948,7 +1948,7 @@
 
 function displayFilteredMembers() {
     searchResultsDiv.innerHTML = '';
-
+    
     searchCountInfo.textContent = `총 ${currentData.length - 1}명의 데이터 중 ${filteredData.length}명 표시`;
 
     if (filteredData.length === 0) {
@@ -1975,7 +1975,10 @@ function displayFilteredMembers() {
         const isDuplicate = members.length > 1;
         const container = document.createElement('div');
         container.className = `member-item ${isDuplicate ? 'duplicate' : ''}`;
-        container.setAttribute('onclick', `showMemberDetailByKey('${key}')`); // 이 부분을 수정했습니다.
+        
+        // 오류의 원인이 되는 onclick 속성을 제거하고,
+        // 대신 data-member-key 속성에 키를 저장합니다.
+        container.dataset.memberKey = key;
 
         const nameEl = document.createElement('div');
         nameEl.className = 'member-name';
@@ -2007,8 +2010,11 @@ function displayFilteredMembers() {
         container.appendChild(detailsEl);
         searchResultsDiv.appendChild(container);
     });
-}
 
+    // 검색 결과가 업데이트된 후 이벤트 리스너를 다시 설정합니다.
+    addMemberItemListeners();
+}
+    
    function showMemberDetailByKey(key) {
     const members = memberMap.get(key);
     if (members) {
@@ -2017,6 +2023,15 @@ function displayFilteredMembers() {
         console.error('해당 키를 가진 당원 데이터가 없습니다:', key);
         alert('오류: 당원 상세 정보를 불러올 수 없습니다.');
     }
+}
+
+function addMemberItemListeners() {
+    document.querySelectorAll('.member-item').forEach(item => {
+        item.addEventListener('click', (event) => {
+            const key = event.currentTarget.dataset.memberKey;
+            showMemberDetailByKey(key);
+        });
+    });
 }
 
     function showMemberDetail(members) {
