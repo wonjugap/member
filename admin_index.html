@@ -27,66 +27,70 @@
 
         let app, db;
         let isFirebaseReady = false;
-        window.isFirebaseReady = false;
         let connectionRetryCount = 0;
         const maxRetries = 3;
         
         // 안전한 함수 호출 헬퍼
-async function safeCallFunction(functionName, ...args) {
-    try {
-        console.log(`🔧 ${functionName} 함수 호출 시작`);
-
-        const func = window[functionName];
-        if (typeof func !== 'function') {
-            console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
-            alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
-            return null;
-        }
-
-        // 필요 시 Firebase 초기화 검사 유지
-        const firebaseFunctions = [
-            'loadMemberDataFromFirebase',
-            'loadMemberDataFromFirebaseInTab', 
-            'loadFirebaseDataDirectly',
-            'syncMemberDataToFirebase',
-            'syncUsersToFirebase',
-            'loadUsersFromFirebase'
-        ];
-
-        if (firebaseFunctions.includes(functionName)) {
-            if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
-                console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
-                alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
+        function safeCallFunction(functionName, ...args) {
+            try {
+                console.log(`🔧 ${functionName} 함수 호출 시작`);
+                
+                const func = window[functionName];
+                if (typeof func !== 'function') {
+                    console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
+                    alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
+                    return null;
+                }
+                
+                const firebaseFunctions = [
+                    'loadMemberDataFromFirebase',
+                    'loadMemberDataFromFirebaseInTab', 
+                    'loadFirebaseDataDirectly',
+                    'syncMemberDataToFirebase',
+                    'syncUsersToFirebase',
+                    'loadUsersFromFirebase'
+                ];
+                
+                if (firebaseFunctions.includes(functionName)) {
+                    if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
+                        console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
+                        alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
+                        return null;
+                    }
+                }
+                
+                let result;
+                try {
+                    result = func(...args);
+                } catch (execError) {
+                    console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
+                    alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
+                    return null;
+                }
+                
+                if (result && typeof result.then === 'function') {
+                    console.log(`⚡ ${functionName}가 Promise를 반환했습니다`);
+                    result.then((success) => {
+                        console.log(`✅ ${functionName} Promise 성공 완료:`, success);
+                    }).catch((error) => {
+                        console.error(`❌ ${functionName} Promise 실행 중 오류:`, error);
+                        alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${error.message}`);
+                    });
+                } else {
+                    console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
+                }
+                
+                return result;
+                
+            } catch (error) {
+                console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
+                alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
                 return null;
             }
         }
 
-        let result;
-        try {
-            result = func(...args);
-            if (result && typeof result.then === 'function') {
-                console.log(`⚡ ${functionName}가 Promise를 반환했습니다, await 처리 중...`);
-                result = await result;  // 비동기 완료까지 대기
-                console.log(`✅ ${functionName} Promise 성공 완료:`, result);
-            } else {
-                console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
-            }
-        } catch (execError) {
-            console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
-            alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
-            return null;
-        }
-
-        return result;
-
-    } catch (error) {
-        console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
-        alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
-        return null;
-    }
-}
-window.safeCallFunction = safeCallFunction;
-
+        window.safeCallFunction = safeCallFunction;
+        
         // Firebase 데이터 섹션 숨기기
         function hideFirebaseDataSection() {
             const section = document.getElementById('firebaseDataSection');
@@ -96,65 +100,55 @@ window.safeCallFunction = safeCallFunction;
         }
         
         // Firebase 데이터 직접 불러오기
-function loadFirebaseDataDirectly() {
-    console.log('loadFirebaseDataDirectly 함수 호출됨');
-    
-    if (!window.loadMemberDataFromFirebase) {
-        console.error('loadMemberDataFromFirebase 함수가 정의되지 않았습니다');
-        alert('❌ Firebase 데이터 로드 기능을 사용할 수 없습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
-        return;
-    }
-    
-    if (!window.checkFirebaseConnection || !window.checkFirebaseConnection()) {
-        alert('Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 파일만 사용할 수 있습니다.');
-        return;
-    }
-    
-    try {
-        const loadResult = window.loadMemberDataFromFirebase();
-        
-        if (!loadResult) {
-            console.error('loadMemberDataFromFirebase가 null/undefined를 반환했습니다');
-            alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
-            throw new Error('loadMemberDataFromFirebase가 유효한 값을 반환하지 않았습니다.');
-        }
-        
-        // **수정된 부분: Promise를 직접 반환합니다.**
-        if (typeof loadResult.then === 'function') {
-            console.log('Promise 반환 확인됨, then 체인 시작');
-            return loadResult.then((result) => { // **여기에 'return' 키워드가 추가되었습니다.**
-                console.log('Firebase 데이터 로드 성공:', result);
-                hideFirebaseDataSection();
+        function loadFirebaseDataDirectly() {
+            console.log('loadFirebaseDataDirectly 함수 호출됨');
+            
+            if (!window.loadMemberDataFromFirebase) {
+                console.error('loadMemberDataFromFirebase 함수가 정의되지 않았습니다');
+                alert('❌ Firebase 데이터 로드 기능을 사용할 수 없습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
+                return;
+            }
+            
+            if (!window.checkFirebaseConnection || !window.checkFirebaseConnection()) {
+                alert('Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 파일만 사용할 수 있습니다.');
+                return;
+            }
+            
+            try {
+                const loadResult = window.loadMemberDataFromFirebase();
                 
-                if (result && result.format === 'legacy') {
-                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터 (구 형식)\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}\n\n💡 관리자에게 최신 형식으로 재배포를 요청하세요.`);
-                } else if (result && result.count) {
-                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터\n📦 ${result.chunks || 1}/${result.totalChunks || 1} 청크 로드 완료\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}`);
-                } else {
-                    alert('✅ Firebase에서 데이터를 불러왔습니다.');
+                if (!loadResult) {
+                    console.error('loadMemberDataFromFirebase가 null/undefined를 반환했습니다');
+                    alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
+                    return;
                 }
                 
-        // 📌 데이터 저장 및 UI 갱신
-        if (window.saveDataToStorage) window.saveDataToStorage();
-        if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-
-                return result; // 결과값도 함께 반환
-            }).catch((error) => {
-                console.error('Firebase 데이터 로드 실패:', error);
-                alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
-                throw error; // 에러를 다시 던져서 safeCallFunction이 감지하게 합니다.
-            });
-        } else {
-            console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
-            alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n반환값이 Promise가 아닙니다.');
-            throw new Error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다.');
+                if (typeof loadResult.then === 'function') {
+                    console.log('Promise 반환 확인됨, then 체인 시작');
+                    loadResult.then((result) => {
+                        console.log('Firebase 데이터 로드 성공:', result);
+                        hideFirebaseDataSection();
+                        
+                        if (result && result.format === 'legacy') {
+                            alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터 (구 형식)\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}\n\n💡 관리자에게 최신 형식으로 재배포를 요청하세요.`);
+                        } else if (result && result.count) {
+                            alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터\n📦 ${result.chunks || 1}/${result.totalChunks || 1} 청크 로드 완료\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}`);
+                        } else {
+                            alert('✅ Firebase에서 데이터를 불러왔습니다.');
+                        }
+                    }).catch((error) => {
+                        console.error('Firebase 데이터 로드 실패:', error);
+                        alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
+                    });
+                } else {
+                    console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
+                    alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n반환값이 Promise가 아닙니다.');
+                }
+            } catch (error) {
+                console.error('loadFirebaseDataDirectly 실행 중 예외:', error);
+                alert(`❌ Firebase 데이터 로드 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+            }
         }
-    } catch (error) {
-        console.error('loadFirebaseDataDirectly 실행 중 예외:', error);
-        alert(`❌ Firebase 데이터 로드 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
-        throw error; // 에러를 다시 던져서 safeCallFunction이 감지하게 합니다.
-    }
-}
         
         // Firebase 탭에서 불러오는 함수
         function loadMemberDataFromFirebaseInTab() {
@@ -172,7 +166,7 @@ function loadFirebaseDataDirectly() {
                 // Firebase 초기화
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
-                window.db = db;
+                
                 // 개발 환경에서 에뮬레이터 사용 (선택사항)
                 if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
                     try {
@@ -188,9 +182,6 @@ function loadFirebaseDataDirectly() {
                 
                 console.log('✅ Firebase 초기화 성공');
                 isFirebaseReady = true;
-                window.isFirebaseReady = true; // 전역 변수로도 등록
-                db = getFirestore(app);
-                window.db = db;
                 
                 // Firebase 함수들을 전역으로 노출
                 window.firebaseApp = app;
@@ -268,528 +259,504 @@ function loadFirebaseDataDirectly() {
             }
         }
         
-// Firebase 관련 함수들 정의
-function defineFirebaseFunctions() {
-    // 사용자 정보 Firebase 로드
-    window.loadUsersFromFirebase = function() {
-        return new Promise((resolve, reject) => {
-            console.log('🔄 Firebase에서 사용자 정보 로드 시작...');
-            
-            if (!isFirebaseReady || !db) {
-                console.log('❌ Firebase 연결되지 않음');
-                resolve(false);
-                return;
-            }
-            
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '📥 Firebase에서 사용자 정보를 불러오는 중...';
-            }
-            
-            getDoc(doc(db, 'system', 'users')).then((docSnapshot) => {
-                if (docSnapshot.exists()) {
-                    const data = docSnapshot.data();
-                    console.log('Firebase에서 받은 사용자 데이터:', data);
+        // Firebase 관련 함수들 정의
+        function defineFirebaseFunctions() {
+            // 사용자 정보 Firebase 로드
+            window.loadUsersFromFirebase = function() {
+                return new Promise((resolve, reject) => {
+                    console.log('🔄 Firebase에서 사용자 정보 로드 시작...');
                     
-                    if (data.users) {
-                        const oldUserCount = Object.keys(window.users).length;
-                        window.users = data.users;
-                        const newUserCount = Object.keys(window.users).length;
-                        
-                        if (window.saveUsersToStorage) {
-                            window.saveUsersToStorage();
-                        }
-                        
-                        if (statusEl) {
-                            statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
-                        }
-                        
-                        console.log('✅ Firebase에서 사용자 정보를 불러왔습니다.');
-                        console.log(`사용자 수: ${oldUserCount} → ${newUserCount}`);
-                        
-                        if (window.displayUserList) {
-                            window.displayUserList();
-                        }
-                        
-                        alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}\n\n시스템 접근 권한이 필요한 경우, 관리자에게 문의하세요.`);
-                        
-                        resolve(true);
-                    } else {
-                        console.log('❌ Firebase에 사용자 데이터가 없음');
-                        if (statusEl) {
-                            statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
-                        }
-                        alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                    if (!isFirebaseReady || !db) {
+                        console.log('❌ Firebase 연결되지 않음');
                         resolve(false);
+                        return;
                     }
-                } else {
-                    console.log('❌ Firebase 사용자 문서가 존재하지 않음');
-                    if (statusEl) {
-                        statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
-                    }
-                    alert('📭 Firebase에 사용자 문서가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
-                    resolve(false);
-                }
-            }).catch(error => {
-                console.error('❌ Firebase 사용자 로드 에러:', error);
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
-                }
-                alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
-                resolve(false);
-            });
-        });
-    };
-    
-    // 당원 데이터 Firebase 로드
-    window.loadMemberDataFromFirebase = function() {
-        return new Promise((resolve, reject) => {
-            if (!isFirebaseReady || !db) {
-                reject(new Error('Firebase 연결이 필요합니다.'));
-                return;
-            }
-            
-            const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '📥 Firebase에서 당원 데이터를 불러오는 중...';
-            }
-            
-            getDoc(doc(db, 'memberData', 'metadata')).then((metaDoc) => {
-                if (metaDoc.exists()) {
-                    const metaData = metaDoc.data();
                     
-                    if (metaData.syncVersion === '3.0') {
-                        loadChunkedData(metaData, statusEl).then(resolve).catch(() => {
-                           console.warn('⚠️ 청크 데이터 로드 실패, 구 형식으로 재시도합니다.');
-                           loadLegacyData(statusEl).then(resolve).catch(reject);
-                        });
-                    } else {
-                        loadLegacyData(statusEl).then(resolve).catch(reject);
+                    const statusEl = document.getElementById('syncStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = '📥 Firebase에서 사용자 정보를 불러오는 중...';
                     }
-                } else {
-                    loadLegacyData(statusEl).then(resolve).catch(reject);
-                }
-            }).catch(error => {
-                console.error('Firebase 메타데이터 로드 에러:', error);
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 메타데이터 로드 실패: ${error.message}`;
-                }
-                // 메타데이터 로드 실패 시 구 형식으로 시도
-                loadLegacyData(statusEl).then(resolve).catch(reject);
-            });
-        });
-    };
-// 열 설정 저장 
-    window.saveColumnSettingsToFirebase = function() {
-    return new Promise((resolve, reject) => {
-        if (!isFirebaseReady || !db) {
-            reject(new Error('Firebase 연결이 필요합니다.'));
-            return;
-        }
-
-        console.log('🔄 열 설정만 Firebase에 저장하는 중...');
-        const statusEl = document.getElementById('syncStatus');
-        if (statusEl) {
-            statusEl.innerHTML = '⚙️ 열 설정을 Firebase에 저장 중...';
-        }
-
-        const columnSettings = window.columnSettings;
-        if (!columnSettings) {
-            reject(new Error('저장할 열 설정 정보가 없습니다.'));
-            return;
-        }
-        
-        // metadata 문서만 업데이트합니다.
-        const metaDocRef = doc(db, 'memberData', 'metadata');
-        updateDoc(metaDocRef, {
-            columnSettings: columnSettings,
-            lastColumnSettingsSync: new Date().toISOString()
-        }).then(() => {
-            console.log('✅ 열 설정 저장 성공');
-            if (statusEl) {
-                statusEl.innerHTML = `✅ 열 설정이 성공적으로 저장되었습니다.`;
-            }
-            alert('✅ 열 설정이 성공적으로 저장되었습니다.');
-            resolve(true);
-        }).catch(error => {
-            console.error('❌ 열 설정 저장 에러:', error);
-            if (statusEl) {
-                statusEl.innerHTML = `❌ 열 설정 저장 실패: ${error.message}`;
-            }
-            alert(`❌ 열 설정 저장 실패\n\n${error.message}`);
-            reject(error);
-        });
-    });
-};
-    
-    // 사용자 정보 Firebase 동기화
-    window.syncUsersToFirebase = function() {
-        return new Promise((resolve, reject) => {
-            console.log('🔄 사용자 동기화 시작...');
-            console.log('현재 사용자 데이터:', window.users);
-            console.log('Firebase 연결 상태:', isFirebaseReady, !!db);
-            
-            if (!isFirebaseReady || !db) {
-                const errorMsg = 'Firebase 연결이 필요합니다.';
-                console.error('❌', errorMsg);
-                alert('❌ Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 저장소만 사용됩니다.');
-                reject(new Error(errorMsg));
-                return;
-            }
-            
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '👥 사용자 데이터를 Firebase에 동기화하는 중...';
-            }
-            
-            const syncData = {
-                users: window.users,
-                lastSync: new Date().toISOString(),
-                syncVersion: '2.0',
-                totalUsers: Object.keys(window.users).length
+                    
+                    getDoc(doc(db, 'system', 'users')).then((docSnapshot) => {
+                        if (docSnapshot.exists()) {
+                            const data = docSnapshot.data();
+                            console.log('Firebase에서 받은 사용자 데이터:', data);
+                            
+                            if (data.users) {
+                                const oldUserCount = Object.keys(window.users).length;
+                                window.users = data.users;
+                                const newUserCount = Object.keys(window.users).length;
+                                
+                                if (window.saveUsersToStorage) {
+                                    window.saveUsersToStorage();
+                                }
+                                
+                                if (statusEl) {
+                                    statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
+                                }
+                                
+                                console.log('✅ Firebase에서 사용자 정보를 불러왔습니다.');
+                                console.log(`사용자 수: ${oldUserCount} → ${newUserCount}`);
+                                
+                                if (window.displayUserList) {
+                                    window.displayUserList();
+                                }
+                                
+                                alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
+                                
+                                resolve(true);
+                            } else {
+                                console.log('❌ Firebase에 사용자 데이터가 없음');
+                                if (statusEl) {
+                                    statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
+                                }
+                                alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                                resolve(false);
+                            }
+                        } else {
+                            console.log('❌ Firebase 사용자 문서가 존재하지 않음');
+                            if (statusEl) {
+                                statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
+                            }
+                            alert('📭 Firebase에 사용자 문서가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                            resolve(false);
+                        }
+                    }).catch(error => {
+                        console.error('❌ Firebase 사용자 로드 에러:', error);
+                        if (statusEl) {
+                            statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
+                        }
+                        alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
+                        resolve(false);
+                    });
+                });
             };
             
-            console.log('동기화할 데이터:', syncData);
-            
-            setDoc(doc(db, 'system', 'users'), syncData).then(() => {
-                console.log('✅ Firebase 사용자 동기화 성공');
-                if (statusEl) {
-                    statusEl.innerHTML = `✅ 사용자 데이터가 성공적으로 동기화되었습니다. (${Object.keys(window.users).length}명)`;
-                }
-                
-                setTimeout(() => {
-                    alert(`✅ 사용자 정보가 Firebase에 동기화되었습니다!\n\n👥 총 ${Object.keys(window.users).length}명의 사용자\n📅 동기화 시간: ${new Date().toLocaleString('ko-KR')}\n\n이제 다른 사용자들이 시스템에 접근할 수 있습니다.`);
-                }, 100);
-                
-                resolve(true);
-            }).catch(error => {
-                console.error('❌ Firebase 사용자 동기화 에러:', error);
-                console.error('에러 상세:', error.code, error.message);
-                
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
-                }
-                
-                let errorDetail = '';
-                if (error.code === 'permission-denied') {
-                    errorDetail = '\n\n🔐 권한 오류: Firestore 보안 규칙을 확인해주세요.\nFirebase Console → Firestore Database → 규칙에서\nallow read, write: if true; 로 설정하세요.';
-                } else if (error.code === 'unavailable') {
-                    errorDetail = '\n\n🌐 네트워크 오류: 인터넷 연결을 확인해주세요.';
-                }
-                
-                alert(`❌ 사용자 동기화 실패\n\n오류: ${error.message}${errorDetail}`);
-                reject(error);
-            });
-        });
-    };
-    
-    // 당원 데이터 Firebase 동기화
-    window.syncMemberDataToFirebase = function() {
-        return new Promise((resolve, reject) => {
-            if (!isFirebaseReady || !db) {
-                reject(new Error('Firebase 연결이 필요합니다.'));
-                return;
-            }
-            
-            if (!window.currentData || window.currentData.length <= 1) {
-                reject(new Error('먼저 당원 데이터를 업로드해주세요.'));
-                return;
-            }
-            
-            const statusEl = document.getElementById('syncStatus');
-            if (statusEl) {
-                statusEl.innerHTML = '📊 당원 데이터를 Firebase에 동기화하는 중...';
-            }
-            
-            try {
-                const convertedData = [];
-                
-                for (let i = 1; i < window.currentData.length; i++) {
-                    const row = window.currentData[i];
-                    if (!row || row.length === 0) continue;
+            // 당원 데이터 Firebase 로드
+            window.loadMemberDataFromFirebase = function() {
+                return new Promise((resolve, reject) => {
+                    if (!isFirebaseReady || !db) {
+                        reject(new Error('Firebase 연결이 필요합니다.'));
+                        return;
+                    }
                     
-                    const name = row[window.columnSettings.name - 1] || '';
-                    if (!name.toString().trim()) continue;
+                    const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = '📥 Firebase에서 당원 데이터를 불러오는 중...';
+                    }
                     
-                    const memberObj = {
-                        id: i,
-                        name: name,
-                        dob: row[window.columnSettings.dob - 1] || '',
-                        phone: window.columnSettings.phone > 0 ? (row[window.columnSettings.phone - 1] || '') : '',
-                        dong: window.columnSettings.dong > 0 ? (row[window.columnSettings.dong - 1] || '') : '',
-                        age: window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0,
-                        ageGroup: window.getAgeGroup ? window.getAgeGroup(window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0) : ''
+                    // 먼저 메타데이터 읽기
+                    getDoc(doc(db, 'memberData', 'metadata')).then((metaDoc) => {
+                        if (metaDoc.exists()) {
+                            const metaData = metaDoc.data();
+                            
+                            if (metaData.syncVersion === '3.0') {
+                                // 새 청크 기반 형식
+                                loadChunkedData(metaData, statusEl).then(resolve).catch(reject);
+                            } else {
+                                // 구 형식 데이터
+                                loadLegacyData(statusEl).then(resolve).catch(reject);
+                            }
+                        } else {
+                            // 메타데이터가 없으면 구 형식 확인
+                            loadLegacyData(statusEl).then(resolve).catch(reject);
+                        }
+                    }).catch(error => {
+                        console.error('Firebase 메타데이터 로드 에러:', error);
+                        if (statusEl) {
+                            statusEl.innerHTML = `❌ 메타데이터 로드 실패: ${error.message}`;
+                        }
+                        reject(error);
+                    });
+                });
+            };
+            
+            // 사용자 정보 Firebase 동기화
+            window.syncUsersToFirebase = function() {
+                return new Promise((resolve, reject) => {
+                    console.log('🔄 사용자 동기화 시작...');
+                    console.log('현재 사용자 데이터:', window.users);
+                    console.log('Firebase 연결 상태:', isFirebaseReady, !!db);
+                    
+                    if (!isFirebaseReady || !db) {
+                        const errorMsg = 'Firebase 연결이 필요합니다.';
+                        console.error('❌', errorMsg);
+                        alert('❌ Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 저장소만 사용됩니다.');
+                        reject(new Error(errorMsg));
+                        return;
+                    }
+                    
+                    const statusEl = document.getElementById('syncStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = '👥 사용자 데이터를 Firebase에 동기화하는 중...';
+                    }
+                    
+                    const syncData = {
+                        users: window.users,
+                        lastSync: new Date().toISOString(),
+                        syncVersion: '2.0',
+                        totalUsers: Object.keys(window.users).length
                     };
                     
-                    convertedData.push(memberObj);
-                }
-                
-                const CHUNK_SIZE = 50;
-                const chunks = [];
-                
-                for (let i = 0; i < convertedData.length; i += CHUNK_SIZE) {
-                    chunks.push(convertedData.slice(i, i + CHUNK_SIZE));
-                }
-                
-                if (statusEl) {
-                    statusEl.innerHTML = `📊 데이터를 ${chunks.length}개 청크로 분할하여 동기화 중...`;
-                }
-                
-                const metaData = {
-                    columnSettings: window.columnSettings,
-                    lastSync: new Date().toISOString(),
-                    totalMembers: convertedData.length,
-                    totalChunks: chunks.length,
-                    headers: window.currentData.length > 0 ? window.currentData[0] : [],
-                    syncVersion: '3.0'
-                };
-                
-                const metaPromise = setDoc(doc(db, 'memberData', 'metadata'), metaData);
-                
-                const chunkPromises = chunks.map((chunk, index) => {
-                    return setDoc(doc(db, 'memberData', `chunk_${index}`), {
-                        chunkIndex: index,
-                        members: chunk,
-                        chunkSize: chunk.length,
-                        lastSync: new Date().toISOString()
+                    console.log('동기화할 데이터:', syncData);
+                    
+                    setDoc(doc(db, 'system', 'users'), syncData).then(() => {
+                        console.log('✅ Firebase 사용자 동기화 성공');
+                        if (statusEl) {
+                            statusEl.innerHTML = `✅ 사용자 데이터가 성공적으로 동기화되었습니다. (${Object.keys(window.users).length}명)`;
+                        }
+                        
+                        setTimeout(() => {
+                            alert(`✅ 사용자 정보가 Firebase에 동기화되었습니다!\n\n👥 총 ${Object.keys(window.users).length}명의 사용자\n📅 동기화 시간: ${new Date().toLocaleString('ko-KR')}\n\n이제 다른 사용자들이 시스템에 접근할 수 있습니다.`);
+                        }, 100);
+                        
+                        resolve(true);
+                    }).catch(error => {
+                        console.error('❌ Firebase 사용자 동기화 에러:', error);
+                        console.error('에러 상세:', error.code, error.message);
+                        
+                        if (statusEl) {
+                            statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
+                        }
+                        
+                        let errorDetail = '';
+                        if (error.code === 'permission-denied') {
+                            errorDetail = '\n\n🔐 권한 오류: Firestore 보안 규칙을 확인해주세요.\nFirebase Console → Firestore Database → 규칙에서\nallow read, write: if true; 로 설정하세요.';
+                        } else if (error.code === 'unavailable') {
+                            errorDetail = '\n\n🌐 네트워크 오류: 인터넷 연결을 확인해주세요.';
+                        }
+                        
+                        alert(`❌ 사용자 동기화 실패\n\n오류: ${error.message}${errorDetail}`);
+                        reject(error);
                     });
                 });
-                
-                Promise.all([metaPromise, ...chunkPromises]).then(() => {
-                    if (statusEl) {
-                        statusEl.innerHTML = `✅ 당원 데이터가 성공적으로 동기화되었습니다. (${convertedData.length}명, ${chunks.length}개 청크)`;
-                    }
-                    console.log('Firebase 청크 동기화 완료:', convertedData.length, '명,', chunks.length, '개 청크');
-                    resolve({
-                        success: true,
-                        count: convertedData.length,
-                        chunks: chunks.length
-                    });
-                }).catch(error => {
-                    console.error('Firebase 청크 동기화 에러:', error);
-                    if (statusEl) {
-                        statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
-                    }
-                    reject(error);
-                });
-                
-            } catch (error) {
-                console.error('데이터 변환 에러:', error);
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
-                }
-                reject(error);
-            }
-        });
-    };
-    
-    // Firebase 연결 상태 확인
-    window.checkFirebaseConnection = function() {
-        console.log('🔍 Firebase 연결 상태 확인...');
-        
-        const isConnected = isFirebaseReady && db && window.firebaseInitialized;
-        
-        if (!isConnected) {
-            alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.');
-        } else {
-            alert('✅ Firebase 연결 상태 양호\n\n모든 클라우드 기능을 사용할 수 있습니다.');
-        }
-        
-        return isConnected;
-    };
-    
-    // 사용자 자격 증명 다운로드
-    window.downloadUserCredentials = function() {
-        const userList = Object.keys(window.users).map(username => ({
-            사용자ID: username,
-            비밀번호: window.users[username].password,
-            권한수: window.users[username].permissions.length,
-            권한목록: window.users[username].permissions.join(', ')
-        }));
-        
-        const ws = XLSX.utils.json_to_sheet(userList);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '사용자목록');
-        
-        const fileName = `사용자_계정_목록_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        
-        alert(`${fileName} 파일이 다운로드되었습니다.`);
-    };
-
-    // 불러온 결과 저장 (새로 추가된 기능)
-    window.saveLoadedDataToExcel = function() {
-        return new Promise((resolve, reject) => {
-            console.log('📥 불러온 결과 저장 시작...');
-            const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
-
-            if (!window.currentData || window.currentData.length <= 1) {
-                const errorMsg = '저장할 데이터가 없습니다. 먼저 당원 데이터를 불러와주세요.';
-                if (statusEl) {
-                    statusEl.innerHTML = `⚠️ ${errorMsg}`;
-                }
-                alert(`⚠️ ${errorMsg}`);
-                reject(new Error(errorMsg));
-                return;
-            }
-
-            console.log('✅ 데이터 확인, Excel 파일 생성 시작, 데이터 수:', window.currentData.length - 1);
-            if (statusEl) {
-                statusEl.innerHTML = `✅ 데이터 로드 성공, Excel 파일 생성 중...`;
-            }
-
-            const ws = XLSX.utils.aoa_to_sheet(window.currentData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, '당원목록');
-
-            const fileName = `불러온_당원_데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-            XLSX.writeFile(wb, fileName);
-
-            alert(`✅ ${fileName} 파일이 다운로드되었습니다.\n\n📊 총 ${window.currentData.length - 1}명의 데이터`);
-            console.log('✅ 파일 다운로드 완료');
-
-            if (statusEl) {
-                statusEl.innerHTML = `✅ 불러온 당원 데이터 저장 완료 (${window.currentData.length - 1}명)`;
-            }
-            resolve({ count: window.currentData.length - 1, success: true });
-        });
-    };
-    
-}
-// 아래는 defineFirebaseFunctions() 함수 바깥에 위치해야 합니다.
-// 청크 기반 데이터 로드
-async function loadChunkedData(metaData, statusEl) {
-    if (statusEl) {
-        statusEl.innerHTML = `📥 ${metaData.totalChunks}개 청크에서 데이터를 불러오는 중...`;
-    }
-    
-    const chunkPromises = [];
-    for (let i = 0; i < metaData.totalChunks; i++) {
-        const chunkPromise = getDoc(doc(db, 'memberData', `chunk_${i}`));
-        chunkPromises.push(chunkPromise);
-    }
-    
-    const chunkDocs = await Promise.all(chunkPromises);
-    let allMembers = [];
-    let loadedChunks = 0;
-    
-    chunkDocs.forEach((chunkDoc) => {
-        if (chunkDoc.exists()) {
-            const chunkData = chunkDoc.data();
-            if (chunkData.members) {
-                allMembers = allMembers.concat(chunkData.members);
-                loadedChunks++;
-            }
-        }
-    });
-    
-    if (allMembers.length > 0) {
-        // UI 업데이트 및 전역 변수 할당을 포함하는 함수 호출
-        updateUI(allMembers, metaData, statusEl, loadedChunks);
-        
-        return {
-            success: true,
-            count: allMembers.length,
-            chunks: loadedChunks,
-            totalChunks: metaData.totalChunks,
-            lastSync: metaData.lastSync
-        };
-    } else {
-        if (statusEl) {
-            statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
-        }
-        throw new Error('불러온 데이터가 없습니다.');
-    }
-}
-
-// 구 형식 데이터 로드
-async function loadLegacyData(statusEl) {
-    const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
-    
-    if (docSnapshot.exists()) {
-        const data = docSnapshot.data();
-        
-        // syncVersion에 관계없이 members 배열이 있고 비어있지 않은지 확인
-        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
-            // UI 업데이트 및 전역 변수 할당을 포함하는 함수 호출
-            updateUI(data.members, data, statusEl, 1);
-            
-            return {
-                success: true,
-                count: data.members.length,
-                lastSync: data.lastSync,
-                format: 'legacy'
             };
-        } else {
+            
+            // 당원 데이터 Firebase 동기화
+            window.syncMemberDataToFirebase = function() {
+                return new Promise((resolve, reject) => {
+                    if (!isFirebaseReady || !db) {
+                        reject(new Error('Firebase 연결이 필요합니다.'));
+                        return;
+                    }
+                    
+                    if (!window.currentData || window.currentData.length === 0) {
+                        reject(new Error('먼저 당원 데이터를 업로드해주세요.'));
+                        return;
+                    }
+                    
+                    const statusEl = document.getElementById('syncStatus');
+                    if (statusEl) {
+                        statusEl.innerHTML = '📊 당원 데이터를 Firebase에 동기화하는 중...';
+                    }
+                    
+                    try {
+                        const convertedData = [];
+                        
+                        for (let i = 1; i < window.currentData.length; i++) {
+                            const row = window.currentData[i];
+                            if (!row || row.length === 0) continue;
+                            
+                            const name = row[window.columnSettings.name - 1] || '';
+                            if (!name.toString().trim()) continue;
+                            
+                            const memberObj = {
+                                id: i,
+                                name: name,
+                                dob: row[window.columnSettings.dob - 1] || '',
+                                phone: window.columnSettings.phone > 0 ? (row[window.columnSettings.phone - 1] || '') : '',
+                                dong: window.columnSettings.dong > 0 ? (row[window.columnSettings.dong - 1] || '') : '',
+                                age: window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0,
+                                ageGroup: window.getAgeGroup ? window.getAgeGroup(window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0) : ''
+                            };
+                            
+                            convertedData.push(memberObj);
+                        }
+                        
+                        const CHUNK_SIZE = 50;
+                        const chunks = [];
+                        
+                        for (let i = 0; i < convertedData.length; i += CHUNK_SIZE) {
+                            chunks.push(convertedData.slice(i, i + CHUNK_SIZE));
+                        }
+                        
+                        if (statusEl) {
+                            statusEl.innerHTML = `📊 데이터를 ${chunks.length}개 청크로 분할하여 동기화 중...`;
+                        }
+                        
+                        const metaData = {
+                            columnSettings: window.columnSettings,
+                            lastSync: new Date().toISOString(),
+                            totalMembers: convertedData.length,
+                            totalChunks: chunks.length,
+                            headers: window.currentData.length > 0 ? window.currentData[0] : [],
+                            syncVersion: '3.0'
+                        };
+                        
+                        const metaPromise = setDoc(doc(db, 'memberData', 'metadata'), metaData);
+                        
+                        const chunkPromises = chunks.map((chunk, index) => {
+                            return setDoc(doc(db, 'memberData', `chunk_${index}`), {
+                                chunkIndex: index,
+                                members: chunk,
+                                chunkSize: chunk.length,
+                                lastSync: new Date().toISOString()
+                            });
+                        });
+                        
+                        Promise.all([metaPromise, ...chunkPromises]).then(() => {
+                            if (statusEl) {
+                                statusEl.innerHTML = `✅ 당원 데이터가 성공적으로 동기화되었습니다. (${convertedData.length}명, ${chunks.length}개 청크)`;
+                            }
+                            console.log('Firebase 청크 동기화 완료:', convertedData.length, '명,', chunks.length, '개 청크');
+                            resolve({
+                                success: true,
+                                count: convertedData.length,
+                                chunks: chunks.length
+                            });
+                        }).catch(error => {
+                            console.error('Firebase 청크 동기화 에러:', error);
+                            if (statusEl) {
+                                statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
+                            }
+                            reject(error);
+                        });
+                        
+                    } catch (error) {
+                        console.error('데이터 변환 에러:', error);
+                        if (statusEl) {
+                            statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
+                        }
+                        reject(error);
+                    }
+                });
+            };
+            
+            // Firebase 연결 상태 확인
+            window.checkFirebaseConnection = function() {
+                console.log('🔍 Firebase 연결 상태 확인...');
+                console.log('- isFirebaseReady:', isFirebaseReady);
+                console.log('- db 존재:', !!db);
+                console.log('- firebaseInitialized:', window.firebaseInitialized);
+                
+                const isConnected = isFirebaseReady && db && window.firebaseInitialized;
+                console.log('- 최종 연결 상태:', isConnected);
+                
+                if (!isConnected) {
+                    alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.');
+                } else {
+                    alert('✅ Firebase 연결 상태 양호\n\n모든 클라우드 기능을 사용할 수 있습니다.');
+                }
+                
+                return isConnected;
+            };
+            
+            // 사용자 자격 증명 다운로드
+            window.downloadUserCredentials = function() {
+                const userList = Object.keys(window.users).map(username => ({
+                    사용자ID: username,
+                    비밀번호: window.users[username].password,
+                    권한수: window.users[username].permissions.length,
+                    권한목록: window.users[username].permissions.join(', ')
+                }));
+                
+                const ws = XLSX.utils.json_to_sheet(userList);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '사용자목록');
+                
+                const fileName = `사용자_계정_목록_${new Date().toISOString().split('T')[0]}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                alert(`${fileName} 파일이 다운로드되었습니다.`);
+            };
+            
+            console.log('✅ Firebase 함수들이 안전하게 정의되었습니다.');
+        }
+        
+        // 청크 기반 데이터 로드
+        async function loadChunkedData(metaData, statusEl) {
             if (statusEl) {
-                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않거나 데이터가 비어있습니다.';
+                statusEl.innerHTML = `📥 ${metaData.totalChunks}개 청크에서 데이터를 불러오는 중...`;
             }
-            throw new Error('데이터 형식이 올바르지 않거나 데이터가 비어있습니다.');
+            
+            const chunkPromises = [];
+            for (let i = 0; i < metaData.totalChunks; i++) {
+                const chunkPromise = getDoc(doc(db, 'memberData', `chunk_${i}`));
+                chunkPromises.push(chunkPromise);
+            }
+            
+            const chunkDocs = await Promise.all(chunkPromises);
+            let allMembers = [];
+            let loadedChunks = 0;
+            
+            chunkDocs.forEach((chunkDoc) => {
+                if (chunkDoc.exists()) {
+                    const chunkData = chunkDoc.data();
+                    if (chunkData.members) {
+                        allMembers = allMembers.concat(chunkData.members);
+                        loadedChunks++;
+                    }
+                }
+            });
+            
+            if (allMembers.length > 0) {
+                updateUIWithData(allMembers, metaData, statusEl, loadedChunks);
+                return {
+                    success: true,
+                    count: allMembers.length,
+                    chunks: loadedChunks,
+                    totalChunks: metaData.totalChunks,
+                    lastSync: metaData.lastSync
+                };
+            } else {
+                if (statusEl) {
+                    statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
+                }
+                throw new Error('불러온 데이터가 없습니다.');
+            }
         }
-    } else {
-        if (statusEl) {
-            statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
+        
+        // 구 형식 데이터 로드
+        async function loadLegacyData(statusEl) {
+            const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
+            
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                
+                if (data.syncVersion === '2.0' && data.members) {
+                    updateUIWithLegacyData(data, statusEl);
+                    return {
+                        success: true,
+                        count: data.members.length,
+                        lastSync: data.lastSync,
+                        format: 'legacy'
+                    };
+                } else {
+                    if (statusEl) {
+                        statusEl.innerHTML = '⚠️ 호환되지 않는 데이터 형식입니다.';
+                    }
+                    throw new Error('호환되지 않는 데이터 형식입니다.');
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
+                }
+                throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
+            }
         }
-        throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
-    }
-}
-
-// 공통 데이터 변환 및 UI 업데이트 함수 (수정된 코드)
-function updateUI(members, metaData, statusEl, loadedChunks) {
-    // AOA(Array of Arrays) 형식으로 데이터 변환
-    const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
-    const convertedData = [headers];
-    
-    members.forEach(member => {
-        const row = new Array(headers.length).fill('');
-        const columnSettings = metaData.columnSettings || {};
-        if (columnSettings.name) row[columnSettings.name - 1] = member.name || '';
-        if (columnSettings.dob) row[columnSettings.dob - 1] = member.dob || '';
-        if (columnSettings.phone > 0) row[columnSettings.phone - 1] = member.phone || '';
-        if (columnSettings.dong > 0) row[columnSettings.dong - 1] = member.dong || '';
-        convertedData.push(row);
-    });
-    
-    // 전역 변수에 데이터 할당
-    window.currentData = convertedData;
-    window.columnSettings = metaData.columnSettings || window.columnSettings;
-
-    // UI를 파일 업로드 이후 상태로 강제 전환
-if (window.saveDataToStorage) window.saveDataToStorage();
-if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-
-    // UI 엘리먼트 업데이트
-    const selectedFileEl = document.getElementById('selectedFile');
-    if (selectedFileEl) {
-        selectedFileEl.textContent = `✅ Firebase에서 불러온 데이터 (${metaData.syncVersion === '3.0' ? '청크 기반' : '구 형식'})`;
-    }
-    
-    const nameColEl = document.getElementById('nameCol');
-    const dobColEl = document.getElementById('dobCol');
-    const phoneColEl = document.getElementById('phoneCol');
-    const dongColEl = document.getElementById('dongCol');
-    
-    if (nameColEl) nameColEl.value = window.columnSettings.name;
-    if (dobColEl) dobColEl.value = window.columnSettings.dob;
-    if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
-    if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
-    
-    // 기타 UI 업데이트 함수 호출
-    const memberCount = members.length;
-    if (headers.length > 0) {
-        if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
-        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터', memberCount);
-    }
-    
-    if (window.displayAllMembers) window.displayAllMembers();
-    if (window.saveDataToStorage) window.saveDataToStorage();
-    if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-    
-    if (statusEl) {
-        const formatInfo = metaData.syncVersion === '3.0' ? `(${loadedChunks}/${metaData.totalChunks} 청크)` : '(구 형식)';
-        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명) ${formatInfo}`;
-    }
-}
+        
+        // UI 업데이트 함수들
+        function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
+            const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+            const convertedData = [headers];
+            
+            allMembers.forEach(member => {
+                const row = new Array(headers.length);
+                row.fill('');
+                
+                if (metaData.columnSettings) {
+                    row[metaData.columnSettings.name - 1] = member.name || '';
+                    row[metaData.columnSettings.dob - 1] = member.dob || '';
+                    if (metaData.columnSettings.phone > 0) {
+                        row[metaData.columnSettings.phone - 1] = member.phone || '';
+                    }
+                    if (metaData.columnSettings.dong > 0) {
+                        row[metaData.columnSettings.dong - 1] = member.dong || '';
+                    }
+                }
+                
+                convertedData.push(row);
+            });
+            
+            currentData = convertedData;
+            columnSettings = metaData.columnSettings || columnSettings;
+            
+            const selectedFileEl = document.getElementById('selectedFile');
+            if (selectedFileEl) {
+                selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (청크 기반)';
+            }
+            
+            const nameColEl = document.getElementById('nameCol');
+            const dobColEl = document.getElementById('dobCol');
+            const phoneColEl = document.getElementById('phoneCol');
+            const dongColEl = document.getElementById('dongCol');
+            
+            if (nameColEl) nameColEl.value = columnSettings.name;
+            if (dobColEl) dobColEl.value = columnSettings.dob;
+            if (phoneColEl) phoneColEl.value = columnSettings.phone || '';
+            if (dongColEl) dongColEl.value = columnSettings.dong || '';
+            
+            if (headers.length > 0) {
+                displayHeaderInfo(headers);
+                updateCurrentFileInfo('Firebase 데이터 (청크 기반)', allMembers.length);
+            }
+            
+            displayAllMembers();
+            saveDataToStorage();
+            
+            // 전체 시스템 상태 업데이트
+            updateSystemAfterDataLoad();
+            
+            if (statusEl) {
+                statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${allMembers.length}명, ${loadedChunks}/${metaData.totalChunks} 청크)`;
+            }
+        }
+        
+        function updateUIWithLegacyData(data, statusEl) {
+            const headers = data.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+            const convertedData = [headers];
+            
+            data.members.forEach(member => {
+                const row = new Array(headers.length);
+                row.fill('');
+                
+                if (data.columnSettings) {
+                    row[data.columnSettings.name - 1] = member.name || '';
+                    row[data.columnSettings.dob - 1] = member.dob || '';
+                    if (data.columnSettings.phone > 0) {
+                        row[data.columnSettings.phone - 1] = member.phone || '';
+                    }
+                    if (data.columnSettings.dong > 0) {
+                        row[data.columnSettings.dong - 1] = member.dong || '';
+                    }
+                }
+                
+                convertedData.push(row);
+            });
+            
+            currentData = convertedData;
+            columnSettings = data.columnSettings || columnSettings;
+            
+            const selectedFileEl = document.getElementById('selectedFile');
+            if (selectedFileEl) {
+                selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (구 형식)';
+            }
+            
+            const nameColEl = document.getElementById('nameCol');
+            const dobColEl = document.getElementById('dobCol');
+            const phoneColEl = document.getElementById('phoneCol');
+            const dongColEl = document.getElementById('dongCol');
+            
+            if (nameColEl) nameColEl.value = columnSettings.name;
+            if (dobColEl) dobColEl.value = columnSettings.dob;
+            if (phoneColEl) phoneColEl.value = columnSettings.phone || '';
+            if (dongColEl) dongColEl.value = columnSettings.dong || '';
+            
+            if (headers.length > 0) {
+                displayHeaderInfo(headers);
+                updateCurrentFileInfo('Firebase 데이터 (구 형식)', data.members.length);
+            }
+            
+            displayAllMembers();
+            saveDataToStorage();
+            
+            // 전체 시스템 상태 업데이트
+            updateSystemAfterDataLoad();
+            
+            if (statusEl) {
+                statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${data.members.length}명, 구 형식)`;
+            }
+        }
         
         // 실시간 연결 상태 모니터링
         function startConnectionMonitoring() {
@@ -1604,7 +1571,7 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
                         </div>
                         
                         <div style="text-align: center; margin-top: 20px;">
-                            <button onclick="safeCallFunction('saveColumnSettingsToFirebase')" class="btn btn-success">💾 열 설정 저장</button>
+                            <button onclick="saveColumnSettings()" class="btn btn-success">💾 열 설정 저장</button>
                         </div>
                     </div>
                 </div>
@@ -1789,11 +1756,8 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
                         <div class="sync-buttons">
                             <button onclick="safeCallFunction('syncUsersToFirebase')" class="btn btn-primary">👥 사용자 동기화</button>
                             <button onclick="safeCallFunction('loadUsersFromFirebase')" class="btn btn-info">📥 사용자 불러오기</button>
-                            <button onclick="safeCallFunction('syncMemberDataToFirebase')" class="btn btn-success">📊 당원 데이터 업로드</button>
+                            <button onclick="safeCallFunction('syncMemberDataToFirebase')" class="btn btn-success">📊 당원 데이터 배포</button>
                             <button onclick="safeCallFunction('loadMemberDataFromFirebaseInTab')" class="btn btn-info">📥 당원 데이터 불러오기</button>
-                            <button class="btn btn-info" onclick="safeCallFunction('saveLoadedDataToExcel')">
-                                    <i class="fas fa-download"></i> 불러온 결과 저장
-                            </button>
                             <button onclick="safeCallFunction('checkFirebaseConnection')" class="btn btn-info">🔗 연결 상태 확인</button>
                             <button onclick="safeCallFunction('downloadUserCredentials')" class="btn btn-warning">📋 사용자 계정 목록</button>
                         </div>
@@ -2188,15 +2152,28 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
             } else {
                 console.log('로그인 실패. 사용자 정보:', users[username]);
                 
- if (username === 'admin') {
-                alert('❌ 로그인 실패\n\n' + 'admin 계정 로그인에 실패했습니다.\n' + '비밀번호를 다시 확인해주세요.');
-                return false;
-            }
+                if (username === 'admin') {
+                    const resetConfirm = confirm(
+                        '❌ 로그인 실패\n\n' +
+                        'admin 계정 로그인에 실패했습니다.\n\n' +
+                        '원인:\n' +
+                        '• 비밀번호가 변경되었거나\n' +
+                        '• 저장된 데이터에 문제가 있을 수 있습니다\n\n' +
+                        '✅ 확인: admin 계정을 기본값(admin/admin)으로 초기화\n' +
+                        '❌ 취소: 다시 시도'
+                    );
+                    
+                    if (resetConfirm) {
+                        resetAdminAccount();
+                        return;
+                    }
+                }
                 
+                alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.\n\n💡 최초 사용 시: admin / admin');
             }
         }
 
-                // 로그아웃 함수
+        // 로그아웃 함수
         function logout() {
             if (confirm('로그아웃 하시겠습니까?')) {
                 currentUser = '';
@@ -3510,55 +3487,6 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
             }
         }
 
-    // Firebase에서 당원 데이터 다운로드
-window.downloadMemberDataFromFirebase = async function() {
-    try {
-        if (!window.isFirebaseReady || !window.db) {
-            alert('❌ Firebase 연결이 필요합니다.');
-            return;
-        }
-
-        console.log('📥 Firebase에서 당원 데이터 다운로드 준비 중...');
-        const result = await window.loadMemberDataFromFirebase();
-
-        if (!result || !result.success || !Array.isArray(result.allMembers) || result.allMembers.length === 0) {
-            alert('❌ Firebase에서 불러온 데이터가 없습니다.');
-            return;
-        }
-
-        const allMembers = result.allMembers;
-
-        // 1. 모든 필드 집합 구하기
-        const allFieldsSet = new Set();
-        allMembers.forEach(member => {
-            Object.keys(member).forEach(key => allFieldsSet.add(key));
-        });
-        const allFields = Array.from(allFieldsSet);
-
-        // 2. 헤더 + 각 행 데이터 배열 생성
-        const mergedRows = [allFields];
-        allMembers.forEach(member => {
-            const row = allFields.map(field => member[field] !== undefined ? member[field] : '');
-            mergedRows.push(row);
-        });
-
-        window.currentData = mergedRows;
-        console.log('✅ 다운로드할 데이터:', window.currentData);
-
-        const ws = XLSX.utils.aoa_to_sheet(window.currentData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
-
-        const fileName = `당원데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-
-        alert(`✅ '${fileName}' 파일이 다운로드되었습니다.`);
-    } catch (error) {
-        console.error('❌ 다운로드 중 오류:', error);
-        alert(`❌ 다운로드 중 오류 발생: ${error.message}`);
-    }
-};
-        
         // 설정 관련 함수들
         function changePassword() {
             const newPassword = prompt(`${currentUser}님의 새 비밀번호를 입력하세요:`);
