@@ -606,14 +606,6 @@
             if (allMembers.length > 0) {
                 updateUIWithData(allMembers, metaData, statusEl, loadedChunks);
                 
-    // 불러온 데이터로 currentData 채우기
-    if (typeof allMembers !== 'undefined' && Array.isArray(allMembers) && allMembers.length > 0) {
-        const headerRow = Object.keys(allMembers[0]);
-        const mergedRows = [headerRow];
-        allMembers.forEach(member => mergedRows.push(Object.values(member)));
-        window.currentData = mergedRows;
-    }
-    
 return {
                     success: true,
                     count: allMembers.length,
@@ -3496,18 +3488,22 @@ window.downloadMemberDataFromFirebase = async function() {
             return;
         }
 
-        // 데이터 불러오기
+        console.log('📥 Firebase에서 당원 데이터 다운로드 준비 중...');
         const result = await window.loadMemberDataFromFirebase();
 
-        // 여기서도 currentData 강제 확인
-        if (!window.currentData || window.currentData.length === 0) {
+        if (!result || !result.success || !Array.isArray(result.allMembers) || result.allMembers.length === 0) {
             alert('❌ Firebase에서 불러온 데이터가 없습니다.');
-            console.log('currentData:', window.currentData);
-            console.log('load result:', result);
             return;
         }
 
-        // 엑셀 변환 후 다운로드
+        const allMembers = result.allMembers;
+        const headerRow = Object.keys(allMembers[0]);
+        const mergedRows = [headerRow];
+        allMembers.forEach(member => mergedRows.push(Object.values(member)));
+        window.currentData = mergedRows;
+
+        console.log('✅ 다운로드할 데이터 준비 완료:', window.currentData);
+
         const ws = XLSX.utils.aoa_to_sheet(window.currentData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
@@ -3521,7 +3517,6 @@ window.downloadMemberDataFromFirebase = async function() {
         alert(`❌ 다운로드 중 오류 발생: ${error.message}`);
     }
 };
-
         
         // 설정 관련 함수들
         function changePassword() {
