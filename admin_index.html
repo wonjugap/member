@@ -789,6 +789,13 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
         const formatInfo = metaData.syncVersion === '3.0' ? `(${loadedChunks}/${metaData.totalChunks} 청크)` : '(구 형식)';
         statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명) ${formatInfo}`;
     }
+    
+     // **이 부분이 수정된 코드입니다.**
+    // 데이터 로드 완료 후 각 탭의 UI를 갱신하는 함수들을 직접 호출합니다.
+    window.displayAllMembers();
+    window.updateCharts();
+    window.updateSearchFilters();
+    window.updateBirthdayList();
 }
         
         // 실시간 연결 상태 모니터링
