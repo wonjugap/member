@@ -703,99 +703,114 @@ function defineFirebaseFunctions() {
         return convertedData;
     }
     
-    // 공통 UI 업데이트 함수
-    function updateUI(data, metaData, statusEl, loadedChunks) {
-        const headers = data[0];
-        const memberCount = data.length - 1;
+// UI 업데이트 함수들 (수정된 코드)
+function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
+    const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+    const convertedData = [headers];
+    
+    allMembers.forEach(member => {
+        const row = new Array(headers.length).fill('');
         
-        const selectedFileEl = document.getElementById('selectedFile');
-        if (selectedFileEl) {
-            selectedFileEl.textContent = `✅ Firebase에서 불러온 데이터 (${metaData.syncVersion === '3.0' ? '청크 기반' : '구 형식'})`;
+        if (metaData.columnSettings) {
+            row[metaData.columnSettings.name - 1] = member.name || '';
+            row[metaData.columnSettings.dob - 1] = member.dob || '';
+            if (metaData.columnSettings.phone > 0) {
+                row[metaData.columnSettings.phone - 1] = member.phone || '';
+            }
+            if (metaData.columnSettings.dong > 0) {
+                row[metaData.columnSettings.dong - 1] = member.dong || '';
+            }
         }
         
-        const nameColEl = document.getElementById('nameCol');
-        const dobColEl = document.getElementById('dobCol');
-        const phoneColEl = document.getElementById('phoneCol');
-        const dongColEl = document.getElementById('dongCol');
-        
-        const columnSettings = metaData.columnSettings || window.columnSettings;
-        if (nameColEl) nameColEl.value = columnSettings.name;
-        if (dobColEl) dobColEl.value = columnSettings.dob;
-        if (phoneColEl) phoneColEl.value = columnSettings.phone || '';
-        if (dongColEl) dongColEl.value = columnSettings.dong || '';
-        
-        if (headers.length > 0) {
-            if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
-            if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터', memberCount);
-        }
-        
-        if (window.displayAllMembers) window.displayAllMembers();
-        if (window.saveDataToStorage) window.saveDataToStorage();
-        if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-        
-        if (statusEl) {
-            statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명)`;
-        }
+        convertedData.push(row);
+    });
+    
+    window.currentData = convertedData; // 전역 변수 window.currentData에 할당
+    window.columnSettings = metaData.columnSettings || window.columnSettings;
+    
+    const selectedFileEl = document.getElementById('selectedFile');
+    if (selectedFileEl) {
+        selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (청크 기반)';
     }
     
-    console.log('✅ Firebase 함수들이 안전하게 정의되었습니다.');
+    const nameColEl = document.getElementById('nameCol');
+    const dobColEl = document.getElementById('dobCol');
+    const phoneColEl = document.getElementById('phoneCol');
+    const dongColEl = document.getElementById('dongCol');
+    
+    if (nameColEl) nameColEl.value = window.columnSettings.name;
+    if (dobColEl) dobColEl.value = window.columnSettings.dob;
+    if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
+    if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
+    
+    if (headers.length > 0) {
+        if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
+        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터 (청크 기반)', allMembers.length);
+    }
+    
+    if (window.displayAllMembers) window.displayAllMembers();
+    if (window.saveDataToStorage) window.saveDataToStorage();
+    
+    updateSystemAfterDataLoad();
+    
+    if (statusEl) {
+        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${allMembers.length}명, ${loadedChunks}/${metaData.totalChunks} 청크)`;
+    }
 }
+
+function updateUIWithLegacyData(data, statusEl) {
+    const headers = data.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+    const convertedData = [headers];
+    
+    data.members.forEach(member => {
+        const row = new Array(headers.length).fill('');
         
-        function updateUIWithLegacyData(data, statusEl) {
-            const headers = data.headers || ['이름', '생년월일', '전화번호', '읍면동'];
-            const convertedData = [headers];
-            
-            data.members.forEach(member => {
-                const row = new Array(headers.length);
-                row.fill('');
-                
-                if (data.columnSettings) {
-                    row[data.columnSettings.name - 1] = member.name || '';
-                    row[data.columnSettings.dob - 1] = member.dob || '';
-                    if (data.columnSettings.phone > 0) {
-                        row[data.columnSettings.phone - 1] = member.phone || '';
-                    }
-                    if (data.columnSettings.dong > 0) {
-                        row[data.columnSettings.dong - 1] = member.dong || '';
-                    }
-                }
-                
-                convertedData.push(row);
-            });
-            
-            currentData = convertedData;
-            columnSettings = data.columnSettings || columnSettings;
-            
-            const selectedFileEl = document.getElementById('selectedFile');
-            if (selectedFileEl) {
-                selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (구 형식)';
+        if (data.columnSettings) {
+            row[data.columnSettings.name - 1] = member.name || '';
+            row[data.columnSettings.dob - 1] = member.dob || '';
+            if (data.columnSettings.phone > 0) {
+                row[data.columnSettings.phone - 1] = member.phone || '';
             }
-            
-            const nameColEl = document.getElementById('nameCol');
-            const dobColEl = document.getElementById('dobCol');
-            const phoneColEl = document.getElementById('phoneCol');
-            const dongColEl = document.getElementById('dongCol');
-            
-            if (nameColEl) nameColEl.value = columnSettings.name;
-            if (dobColEl) dobColEl.value = columnSettings.dob;
-            if (phoneColEl) phoneColEl.value = columnSettings.phone || '';
-            if (dongColEl) dongColEl.value = columnSettings.dong || '';
-            
-            if (headers.length > 0) {
-                displayHeaderInfo(headers);
-                updateCurrentFileInfo('Firebase 데이터 (구 형식)', data.members.length);
-            }
-            
-            displayAllMembers();
-            saveDataToStorage();
-            
-            // 전체 시스템 상태 업데이트
-            updateSystemAfterDataLoad();
-            
-            if (statusEl) {
-                statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${data.members.length}명, 구 형식)`;
+            if (data.columnSettings.dong > 0) {
+                row[data.columnSettings.dong - 1] = member.dong || '';
             }
         }
+        
+        convertedData.push(row);
+    });
+    
+    window.currentData = convertedData; // 전역 변수 window.currentData에 할당
+    window.columnSettings = data.columnSettings || window.columnSettings;
+    
+    const selectedFileEl = document.getElementById('selectedFile');
+    if (selectedFileEl) {
+        selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (구 형식)';
+    }
+    
+    const nameColEl = document.getElementById('nameCol');
+    const dobColEl = document.getElementById('dobCol');
+    const phoneColEl = document.getElementById('phoneCol');
+    const dongColEl = document.getElementById('dongCol');
+    
+    if (nameColEl) nameColEl.value = window.columnSettings.name;
+    if (dobColEl) dobColEl.value = window.columnSettings.dob;
+    if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
+    if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
+    
+    if (headers.length > 0) {
+        if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
+        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터 (구 형식)', data.members.length);
+    }
+    
+    if (window.displayAllMembers) window.displayAllMembers();
+    if (window.saveDataToStorage) window.saveDataToStorage();
+    
+    updateSystemAfterDataLoad();
+    
+    if (statusEl) {
+        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${data.members.length}명, 구 형식)`;
+    }
+}
         
         // 실시간 연결 상태 모니터링
         function startConnectionMonitoring() {
