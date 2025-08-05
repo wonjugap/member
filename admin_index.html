@@ -669,34 +669,36 @@ return {
             }
         }
         
-        // 구 형식 데이터 로드
-        async function loadLegacyData(statusEl) {
-            const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
-            
-            if (docSnapshot.exists()) {
-                const data = docSnapshot.data();
-                
-                if (data.syncVersion === '2.0' && data.members) {
-                    updateUIWithLegacyData(data, statusEl);
-                    return {
-                        success: true,
-                        count: data.members.length,
-                        lastSync: data.lastSync,
-                        format: 'legacy'
-                    };
-                } else {
-                    if (statusEl) {
-                        statusEl.innerHTML = '⚠️ 호환되지 않는 데이터 형식입니다.';
-                    }
-                    throw new Error('호환되지 않는 데이터 형식입니다.');
-                }
-            } else {
-                if (statusEl) {
-                    statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
-                }
-                throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
+// 구 형식 데이터 로드
+async function loadLegacyData(statusEl) {
+    const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
+
+    if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+
+        // syncVersion 검사 없이 members 배열의 존재 여부만 확인하여 호환성 향상
+        if (data.members && Array.isArray(data.members)) {
+            updateUIWithLegacyData(data, statusEl);
+            return {
+                success: true,
+                count: data.members.length,
+                lastSync: data.lastSync,
+                format: 'legacy'
+            };
+        } else {
+            if (statusEl) {
+                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않습니다. 다시 동기화하거나 확인이 필요합니다.';
             }
+            throw new Error('데이터 형식이 올바르지 않습니다. 다시 동기화하거나 확인이 필요합니다.');
         }
+    } else {
+        if (statusEl) {
+            statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
+        }
+        throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
+    }
+}
+
         
         // UI 업데이트 함수들
         function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
