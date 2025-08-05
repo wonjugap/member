@@ -2007,20 +2007,12 @@ startRealtimeSubscriptions();
         }
 
         // 오프라인 모드 UI 업데이트
-       function updateOfflineModeUI(isOffline) {
-    const offlineNotice = document.getElementById('offlineModeNotice');
-
-    if (isOffline) {
-        if (offlineNotice) {
-            offlineNotice.style.display = 'block';
-        }
-    } else {
-        if (offlineNotice) {
-            offlineNotice.style.display = 'none';
-        }
-    }
-}
-
+       function updateOfflineModeUI() {
+            const offlineNotice = document.getElementById('offlineModeNotice');
+               if (offlineNotice) {
+                    offlineNotice.style.display = 'none';
+                }
+            }
         // 오프라인 알림 표시
         function showOfflineNotice() {
             updateOfflineModeUI();
