@@ -688,12 +688,9 @@ window.saveLoadedMemberData = function() {
                 convertedData.push(row);
             });
             
-            window.window.currentData = convertedData;
-    let saveBtn = document.getElementById('saveLoadedDataBtn');
-    if (saveBtn) saveBtn.disabled = false;
-    const saveBtn = document.getElementById('saveLoadedDataBtn');
-    if (saveBtn) saveBtn.disabled = false;
-
+            window.currentData = convertedData;
+            document.getElementById('saveLoadedDataBtn').disabled = false;
+    
             columnSettings = metaData.columnSettings || columnSettings;
             
             const selectedFileEl = document.getElementById('selectedFile');
@@ -749,11 +746,8 @@ window.saveLoadedMemberData = function() {
                 convertedData.push(row);
             });
             
-            window.window.currentData = convertedData;
-    let saveBtn = document.getElementById('saveLoadedDataBtn');
-    if (saveBtn) saveBtn.disabled = false;
-    const saveBtn = document.getElementById('saveLoadedDataBtn');
-    if (saveBtn) saveBtn.disabled = false;
+            window.currentData = convertedData;
+            document.getElementById('saveLoadedDataBtn').disabled = false;
             
             columnSettings = data.columnSettings || columnSettings;
             
