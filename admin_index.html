@@ -672,12 +672,12 @@ return {
 // 구 형식 데이터 로드
 async function loadLegacyData(statusEl) {
     const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
-
+    
     if (docSnapshot.exists()) {
         const data = docSnapshot.data();
-
-        // syncVersion 검사 없이 members 배열의 존재 여부만 확인하여 호환성 향상
-        if (data.members && Array.isArray(data.members)) {
+        
+        // 데이터 형식에 관계없이 members 배열이 있고 비어있지 않은지 확인
+        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
             updateUIWithLegacyData(data, statusEl);
             return {
                 success: true,
@@ -686,19 +686,20 @@ async function loadLegacyData(statusEl) {
                 format: 'legacy'
             };
         } else {
+            // 문서가 존재하지만 올바른 데이터 형식이 아니거나 데이터가 비어있을 경우
             if (statusEl) {
-                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않습니다. 다시 동기화하거나 확인이 필요합니다.';
+                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않거나 데이터가 비어있습니다.';
             }
-            throw new Error('데이터 형식이 올바르지 않습니다. 다시 동기화하거나 확인이 필요합니다.');
+            throw new Error('데이터 형식이 올바르지 않거나 데이터가 비어있습니다.');
         }
     } else {
+        // 문서 자체가 존재하지 않을 경우
         if (statusEl) {
             statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
         }
         throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
     }
 }
-
         
         // UI 업데이트 함수들
         function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
