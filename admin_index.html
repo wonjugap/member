@@ -535,6 +535,16 @@
                     }
                 });
             };
+
+// 콘솔에서 Firebase 당원 데이터 로딩 테스트
+window.testLoadMemberData = function() {
+    loadMemberDataFromFirebase().then(r => {
+        console.log("로드 결과:", r);
+        console.log("currentData:", window.currentData);
+    }).catch(err => {
+        console.error("로드 중 오류:", err);
+    });
+};
             
             // Firebase 연결 상태 확인
             window.checkFirebaseConnection = function() {
