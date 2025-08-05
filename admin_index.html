@@ -553,6 +553,26 @@
             
             // 사용자 자격 증명 다운로드
             window.downloadUserCredentials = function() {
+
+// 불러온 당원 데이터를 로컬에 저장
+window.saveLoadedMemberData = function() {
+    if (!window.currentData || window.currentData.length === 0) {
+        alert('❌ 저장할 데이터가 없습니다.\n먼저 당원 데이터를 불러와 주세요.');
+        return;
+    }
+    try {
+        const ws = XLSX.utils.aoa_to_sheet(window.currentData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
+        const fileName = `당원데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        alert(`✅ ${fileName} 파일이 다운로드되었습니다.`);
+    } catch (error) {
+        console.error('❌ 데이터 저장 중 오류:', error);
+        alert('❌ 데이터 저장 중 오류가 발생했습니다.\n' + error.message);
+    }
+};
+
                 const userList = Object.keys(window.users).map(username => ({
                     사용자ID: username,
                     비밀번호: window.users[username].password,
@@ -572,28 +592,6 @@
             
             console.log('✅ Firebase 함수들이 안전하게 정의되었습니다.');
         }
-
-// 불러온 당원 데이터를 로컬에 저장
-window.saveLoadedMemberData = function() {
-    if (!window.currentData || window.currentData.length === 0) {
-        alert('❌ 저장할 데이터가 없습니다.\n먼저 당원 데이터를 불러와 주세요.');
-        return;
-    }
-
-    try {
-        const ws = XLSX.utils.aoa_to_sheet(window.currentData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
-
-        const fileName = `당원데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-
-        alert(`✅ ${fileName} 파일이 다운로드되었습니다.`);
-    } catch (error) {
-        console.error('❌ 데이터 저장 중 오류:', error);
-        alert('❌ 데이터 저장 중 오류가 발생했습니다.\n' + error.message);
-    }
-};
         
         // 청크 기반 데이터 로드
         async function loadChunkedData(metaData, statusEl) {
@@ -690,7 +688,11 @@ window.saveLoadedMemberData = function() {
                 convertedData.push(row);
             });
             
-            currentData = convertedData;
+            window.window.currentData = convertedData;
+    const saveBtn = document.getElementById('saveLoadedDataBtn');
+    if (saveBtn) saveBtn.disabled = false;
+    const saveBtn = document.getElementById('saveLoadedDataBtn');
+    if (saveBtn) saveBtn.disabled = false;
             columnSettings = metaData.columnSettings || columnSettings;
             
             const selectedFileEl = document.getElementById('selectedFile');
@@ -746,7 +748,11 @@ window.saveLoadedMemberData = function() {
                 convertedData.push(row);
             });
             
-            currentData = convertedData;
+            window.window.currentData = convertedData;
+    const saveBtn = document.getElementById('saveLoadedDataBtn');
+    if (saveBtn) saveBtn.disabled = false;
+    const saveBtn = document.getElementById('saveLoadedDataBtn');
+    if (saveBtn) saveBtn.disabled = false;
             columnSettings = data.columnSettings || columnSettings;
             
             const selectedFileEl = document.getElementById('selectedFile');
@@ -1776,11 +1782,11 @@ window.saveLoadedMemberData = function() {
                         </div>
                         
                         <div class="sync-buttons">
+    <button id="saveLoadedDataBtn" onclick="safeCallFunction('saveLoadedMemberData')" class="btn btn-warning" disabled>💾 불러온 데이터 저장</button>
                             <button onclick="safeCallFunction('syncUsersToFirebase')" class="btn btn-primary">👥 사용자 동기화</button>
                             <button onclick="safeCallFunction('loadUsersFromFirebase')" class="btn btn-info">📥 사용자 불러오기</button>
                             <button onclick="safeCallFunction('syncMemberDataToFirebase')" class="btn btn-success">📊 당원 데이터 배포</button>
                             <button onclick="safeCallFunction('loadMemberDataFromFirebaseInTab')" class="btn btn-info">📥 당원 데이터 불러오기</button>
-                            <button onclick="safeCallFunction('saveLoadedMemberData')" class="btn btn-warning">💾 불러온 데이터 저장</button>
                             <button onclick="safeCallFunction('checkFirebaseConnection')" class="btn btn-info">🔗 연결 상태 확인</button>
                             <button onclick="safeCallFunction('downloadUserCredentials')" class="btn btn-warning">📋 사용자 계정 목록</button>
                         </div>
