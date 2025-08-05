@@ -47,7 +47,10 @@ function safeCallFunction(functionName, ...args) {
             'loadFirebaseDataDirectly',
             'syncMemberDataToFirebase',
             'syncUsersToFirebase',
-            'loadUsersFromFirebase'
+            'loadUsersFromFirebase',
+            'saveColumnSettingsToFirebase',
+            'downloadUserCredentials',
+            'saveLoadedDataToExcel'
         ];
 
         if (firebaseFunctions.includes(functionName)) {
@@ -63,8 +66,8 @@ function safeCallFunction(functionName, ...args) {
             result = func(...args);
             if (result && typeof result.then === 'function') {
                 console.log(`⚡ ${functionName}가 Promise를 반환했습니다, await 처리 중...`);
-                result = await result;  // 비동기 완료까지 대기
-                console.log(`✅ ${functionName} Promise 성공 완료:`, result);
+                // 여기서는 비동기 함수 실행 후 반환값을 기다리지 않고 바로 반환
+                // 비동기 실행을 시작만 하고 호출자에게 Promise를 넘겨주는 것이 더 자연스러움
             } else {
                 console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
             }
@@ -770,7 +773,6 @@ function updateUI(members, metaData, statusEl, loadedChunks) {
         statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명) ${formatInfo}`;
     }
     
-    // **수정된 핵심 부분:** 데이터 로드 후 모든 UI 업데이트 함수를 확실하게 호출합니다.
     window.updateSystemAfterDataLoad();
 }
 
@@ -828,18 +830,9 @@ document.querySelectorAll('.tab-btn').forEach(button => {
         button.classList.add('active');
         const tabId = button.getAttribute('data-tab');
         document.getElementById(tabId).classList.add('active');
-
-        if (tabId === 'statistics') {
-            window.updateCharts();
-        }
         
-        if (tabId === 'member-search') {
-            window.updateSearchFilters();
-        }
-        
-        if (tabId === 'birthday-search') {
-            window.updateBirthdayList();
-        }
+        // 탭 전환 시 UI를 업데이트하도록 수정
+        window.updateSystemAfterDataLoad();
     });
 });
 
@@ -1138,6 +1131,7 @@ window.login = function() {
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('currentUser').textContent = `사용자: ${username}`;
         
+        // 로그인 성공 시 UI 업데이트
         window.updatePermissionsUI();
     } else {
         loginMessage.textContent = '잘못된 사용자 ID 또는 비밀번호입니다.';
@@ -1222,14 +1216,26 @@ window.loadUsersFromStorage = function() {
 
 window.updatePermissionsUI = function() {
     const user = window.users[window.currentUser];
-    if (user && !user.permissions.includes('admin')) {
-        document.querySelector('.tab-btn[data-tab="user-manage"]').style.display = 'none';
-        document.getElementById('firebaseDataSection').style.display = 'none';
-        document.getElementById('columnSettingsCard').style.display = 'none';
+    const isAdmin = user && user.permissions.includes('admin');
+
+    const userManageTab = document.querySelector('.tab-btn[data-tab="user-manage"]');
+    const firebaseDataSection = document.getElementById('firebaseDataSection');
+    const columnSettingsCard = document.getElementById('columnSettingsCard');
+    
+    if (isAdmin) {
+        if (userManageTab) userManageTab.style.display = 'block';
+        if (firebaseDataSection) firebaseDataSection.style.display = 'block';
+        if (columnSettingsCard) columnSettingsCard.style.display = 'block';
     } else {
-        document.querySelector('.tab-btn[data-tab="user-manage"]').style.display = 'block';
-        document.getElementById('firebaseDataSection').style.display = 'block';
-        document.getElementById('columnSettingsCard').style.display = 'block';
+        if (userManageTab) userManageTab.style.display = 'none';
+        if (firebaseDataSection) firebaseDataSection.style.display = 'none';
+        if (columnSettingsCard) columnSettingsCard.style.display = 'none';
+    }
+
+    // 권한 변경 후, 현재 탭이 관리자 전용 탭이었다면 데이터 관리 탭으로 이동
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (!isAdmin && activeTab && activeTab.getAttribute('data-tab') === 'user-manage') {
+        document.querySelector('.tab-btn[data-tab="data-manage"]').click();
     }
 };
 
@@ -1251,12 +1257,15 @@ window.loadDataFromStorage = function() {
         window.currentData = data.data;
         window.columnSettings = data.columnSettings;
         console.log('로컬 저장소에서 데이터가 로드되었습니다.');
-        window.updateSystemAfterDataLoad(); 
         
         const memberCount = window.currentData.length > 1 ? window.currentData.length - 1 : 0;
         window.updateCurrentFileInfo('로컬 저장된 데이터', memberCount);
+        
+        return true;
     }
+    return false;
 };
+
 const fileInput = document.getElementById('fileInput');
 const fileInputLabel = document.getElementById('fileInputLabel');
 
@@ -1358,7 +1367,7 @@ startFirebaseConnection();
 
 window.onload = function() {
     window.loadUsersFromStorage();
-    window.loadDataFromStorage();
+    window.loadDataFromStorage(); // 로컬 저장소에서 데이터 불러오기
     
     const lastLoginUser = localStorage.getItem('lastLoginUser');
     if (lastLoginUser && window.users[lastLoginUser]) {
@@ -1366,6 +1375,7 @@ window.onload = function() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('currentUser').textContent = `사용자: ${lastLoginUser}`;
+        
         window.updatePermissionsUI();
     } else {
         document.getElementById('loginScreen').style.display = 'block';
