@@ -1758,6 +1758,7 @@
                             <button onclick="safeCallFunction('loadUsersFromFirebase')" class="btn btn-info">📥 사용자 불러오기</button>
                             <button onclick="safeCallFunction('syncMemberDataToFirebase')" class="btn btn-success">📊 당원 데이터 배포</button>
                             <button onclick="safeCallFunction('loadMemberDataFromFirebaseInTab')" class="btn btn-info">📥 당원 데이터 불러오기</button>
+                            <button onclick="safeCallFunction('downloadMemberDataFromFirebase')" class="btn btn-warning">📥 당원 데이터 다운로드</button>
                             <button onclick="safeCallFunction('checkFirebaseConnection')" class="btn btn-info">🔗 연결 상태 확인</button>
                             <button onclick="safeCallFunction('downloadUserCredentials')" class="btn btn-warning">📋 사용자 계정 목록</button>
                         </div>
@@ -3474,6 +3475,41 @@
             }
         }
 
+    // Firebase에서 당원 데이터 다운로드
+window.downloadMemberDataFromFirebase = async function() {
+    try {
+        if (!isFirebaseReady || !db) {
+            alert('❌ Firebase 연결이 필요합니다.');
+            return;
+        }
+
+        // Firebase에서 데이터 로드
+        const result = await window.loadMemberDataFromFirebase();
+        if (!result || !window.currentData || window.currentData.length === 0) {
+            alert('❌ 불러올 데이터가 없습니다.');
+            return;
+        }
+
+        // currentData → 엑셀 파일로 변환
+        const ws = XLSX.utils.aoa_to_sheet(window.currentData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
+
+        // 파일명 생성
+        const fileName = `당원데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        // 다운로드 실행
+        XLSX.writeFile(wb, fileName);
+
+        alert(`✅ '${fileName}' 파일이 다운로드되었습니다.`);
+    } catch (error) {
+        console.error('❌ 다운로드 중 오류:', error);
+        alert(`❌ 다운로드 중 오류 발생: ${error.message}`);
+    }
+};
+
+
+        
         // 설정 관련 함수들
         function changePassword() {
             const newPassword = prompt(`${currentUser}님의 새 비밀번호를 입력하세요:`);
