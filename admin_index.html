@@ -134,11 +134,11 @@ function loadFirebaseDataDirectly() {
                     alert('✅ Firebase에서 데이터를 불러왔습니다.');
                 }
                 
-                
         // 📌 데이터 저장 및 UI 갱신
         if (window.saveDataToStorage) window.saveDataToStorage();
         if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-        return result; // 결과값도 함께 반환
+
+                return result; // 결과값도 함께 반환
             }).catch((error) => {
                 console.error('Firebase 데이터 로드 실패:', error);
                 alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
