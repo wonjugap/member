@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>더불어민주당 원주갑 당원관리 시스템</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+        import { connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+        
+  // Firebase 프로젝트 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAFAsd9XBblWD1G2vVrP48T9IQqwWoDZro",
+            authDomain: "wonju-minjoo-member-system.firebaseapp.com",
+            projectId: "wonju-minjoo-member-system",
+            storageBucket: "wonju-minjoo-member-system.firebasestorage.app",
+            messagingSenderId: "227156177261",
+            appId: "1:227156177261:web:9f37ea54dab14265c2aa64"
+        };
+
+        let app, db;
+        let isFirebaseReady = false;
+        window.isFirebaseReady = false;
+        let connectionRetryCount = 0;
+        const maxRetries = 3;
+        
+        // 안전한 함수 호출 헬퍼
+function safeCallFunction(functionName, ...args) {
+    try {
+        console.log(`🔧 ${functionName} 함수 호출 시작`);
+
+        const func = window[functionName];
+        if (typeof func !== 'function') {
+            console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
+            alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
+            return null;
+        }
+
+        const firebaseFunctions = [
+            'loadMemberDataFromFirebase',
+            'loadMemberDataFromFirebaseInTab', 
+            'loadFirebaseDataDirectly',
+            'syncMemberDataToFirebase',
+            'syncUsersToFirebase',
+            'loadUsersFromFirebase'
+        ];
+
+        if (firebaseFunctions.includes(functionName)) {
+            if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
+                console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
+                alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
+                return null;
+            }
+        }
+
+        let result;
+        try {
+            result = func(...args);
+            if (result && typeof result.then === 'function') {
+                console.log(`⚡ ${functionName}가 Promise를 반환했습니다, await 처리 중...`);
+                result = await result;  // 비동기 완료까지 대기
+                console.log(`✅ ${functionName} Promise 성공 완료:`, result);
+            } else {
+                console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
+            }
+        } catch (execError) {
+            console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
+            alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
+            return null;
+        }
+
+        return result;
+
+    } catch (error) {
+        console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
+        alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+        return null;
+    }
+}
+window.safeCallFunction = safeCallFunction;
+
+        // Firebase 데이터 섹션 숨기기
+        function hideFirebaseDataSection() {
+            const section = document.getElementById('firebaseDataSection');
+            if (section) {
+                section.style.display = 'none';
+            }
+        }
+        
+        // Firebase 데이터 직접 불러오기
+function loadFirebaseDataDirectly() {
+    console.log('loadFirebaseDataDirectly 함수 호출됨');
+    
+    if (!window.loadMemberDataFromFirebase) {
+        console.error('loadMemberDataFromFirebase 함수가 정의되지 않았습니다');
+        alert('❌ Firebase 데이터 로드 기능을 사용할 수 없습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
+        return;
+    }
+    
+    if (!window.checkFirebaseConnection || !window.checkFirebaseConnection()) {
+        alert('Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 파일만 사용할 수 있습니다.');
+        return;
+    }
+    
+    try {
+        const loadResult = window.loadMemberDataFromFirebase();
+        
+        if (!loadResult) {
+            console.error('loadMemberDataFromFirebase가 null/undefined를 반환했습니다');
+            alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n오프라인 모드로 작업하거나 페이지를 새로고침해주세요.');
+            throw new Error('loadMemberDataFromFirebase가 유효한 값을 반환하지 않았습니다.');
+        }
+        
+        if (typeof loadResult.then === 'function') {
+            console.log('Promise 반환 확인됨, then 체인 시작');
+            return loadResult.then((result) => { 
+                console.log('Firebase 데이터 로드 성공:', result);
+                hideFirebaseDataSection();
+                
+                if (result && result.format === 'legacy') {
+                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터 (구 형식)\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}\n\n💡 관리자에게 최신 형식으로 재배포를 요청하세요.`);
+                } else if (result && result.count) {
+                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터\n📦 ${result.chunks || 1}/${result.totalChunks || 1} 청크 로드 완료\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}`);
+                } else {
+                    alert('✅ Firebase에서 데이터를 불러왔습니다.');
+                }
+                
+                if (window.saveDataToStorage) window.saveDataToStorage();
+                if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
+
+                return result; 
+            }).catch((error) => {
+                console.error('Firebase 데이터 로드 실패:', error);
+                alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
+                throw error; 
+            });
+        } else {
+            console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
+            alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n반환값이 Promise가 아닙니다.');
+            throw new Error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다.');
+        }
+    } catch (error) {
+        console.error('loadFirebaseDataDirectly 실행 중 예외:', error);
+        alert(`❌ Firebase 데이터 로드 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+        throw error; 
+    }
+}
+        
+        // Firebase 탭에서 불러오는 함수
+        function loadMemberDataFromFirebaseInTab() {
+            return loadFirebaseDataDirectly();
+        }
+        
+        // Firebase 초기화 및 연결 관리
+        async function startFirebaseConnection() {
+            try {
+                // Firebase 설정 유효성 검사
+                if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY_HERE") {
+                    throw new Error('Firebase 설정이 필요합니다. firebaseConfig를 실제 프로젝트 설정으로 교체하세요.');
+                }
+                
+                // Firebase 초기화
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                window.db = db;
+                // 개발 환경에서 에뮬레이터 사용 (선택사항)
+                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                    try {
+                        connectFirestoreEmulator(db, 'localhost', 8080);
+                        console.log('🔧 Firestore 에뮬레이터에 연결됨');
+                    } catch (e) {
+                        console.log('📡 실제 Firestore에 연결됨');
+                    }
+                }
+                
+                // 연결 테스트
+                await performConnectionTest();
+                
+                console.log('✅ Firebase 초기화 성공');
+                isFirebaseReady = true;
+                window.isFirebaseReady = true; 
+                db = getFirestore(app);
+                window.db = db;
+                
+                // Firebase 함수들을 전역으로 노출
+                window.firebaseApp = app;
+                window.firebaseDB = db;
+                window.firebaseUtils = {
+                    collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot,
+                    enableNetwork, disableNetwork
+                };
+                
+                window.firebaseInitialized = true;
+                
+                // Firebase 재연결 시도 함수 정의
+                window.retryFirebaseConnection = async function() {
+                    console.log('🔄 Firebase 재연결 시도...');
+                    connectionRetryCount = 0;
+                    await startFirebaseConnection();
+                };
+                
+                // Firebase 관련 함수들 정의
+                defineFirebaseFunctions();
+                
+                // 헬퍼 함수들 전역 노출
+                window.loadMemberDataFromFirebaseInTab = loadMemberDataFromFirebaseInTab;
+                window.loadFirebaseDataDirectly = loadFirebaseDataDirectly;
+                window.hideFirebaseDataSection = hideFirebaseDataSection;
+                
+                // 연결 상태 업데이트 (지연 실행)
+                setTimeout(() => {
+                    if (window.updateFirebaseStatus) {
+                        window.updateFirebaseStatus(true, '연결됨');
+                    }
+                }, 100);
+                
+                console.log('✅ Firebase 함수들이 전역으로 노출되었습니다');
+                
+                // 실시간 연결 상태 모니터링 시작
+                startConnectionMonitoring();
+                
+            } catch (error) {
+                console.error('❌ Firebase 초기화 실패:', error);
+                isFirebaseReady = false;
+                
+                // 함수가 정의된 후에 호출하도록 지연
+                setTimeout(() => {
+                    if (window.updateFirebaseStatus) {
+                        window.updateFirebaseStatus(false, `초기화 실패 - 오프라인 모드`);
+                    }
+                    
+                    // 오프라인 모드로 전환
+                    activateOfflineMode();
+                }, 100);
+            }
+        }
+        
+        // Firebase 연결 테스트
+        async function performConnectionTest() {
+            try {
+                const testRef = doc(db, 'system', 'connectionTest');
+                await setDoc(testRef, { 
+                    timestamp: new Date().toISOString(),
+                    status: 'connection_test',
+                    version: '1.3'
+                }, { merge: true });
+                
+                const testDoc = await getDoc(testRef);
+                if (!testDoc.exists()) {
+                    throw new Error('문서 읽기/쓰기 테스트 실패');
+                }
+                
+                console.log('✅ Firebase 연결 테스트 성공');
+                return true;
+            } catch (error) {
+                console.error('❌ Firebase 연결 테스트 실패:', error);
+                throw error;
+            }
+        }
+        
+// Firebase 관련 함수들 정의
+function defineFirebaseFunctions() {
+    // 사용자 정보 Firebase 로드
+    window.loadUsersFromFirebase = function() {
+        return new Promise((resolve, reject) => {
+            console.log('🔄 Firebase에서 사용자 정보 로드 시작...');
+            
+            if (!isFirebaseReady || !db) {
+                console.log('❌ Firebase 연결되지 않음');
+                resolve(false);
+                return;
+            }
+            
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '📥 Firebase에서 사용자 정보를 불러오는 중...';
+            }
+            
+            getDoc(doc(db, 'system', 'users')).then((docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const data = docSnapshot.data();
+                    console.log('Firebase에서 받은 사용자 데이터:', data);
+                    
+                    if (data.users) {
+                        const oldUserCount = Object.keys(window.users).length;
+                        window.users = data.users;
+                        const newUserCount = Object.keys(window.users).length;
+                        
+                        if (window.saveUsersToStorage) {
+                            window.saveUsersToStorage();
+                        }
+                        
+                        if (statusEl) {
+                            statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
+                        }
+                        
+                        console.log('✅ Firebase에서 사용자 정보를 불러왔습니다.');
+                        console.log(`사용자 수: ${oldUserCount} → ${newUserCount}`);
+                        
+                        if (window.displayUserList) {
+                            window.displayUserList();
+                        }
+                        
+                        alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}\n\n시스템 접근 권한이 필요한 경우, 관리자에게 문의하세요.`);
+                        
+                        resolve(true);
+                    } else {
+                        console.log('❌ Firebase에 사용자 데이터가 없음');
+                        if (statusEl) {
+                            statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
+                        }
+                        alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                        resolve(false);
+                    }
+                } else {
+                    console.log('❌ Firebase 사용자 문서가 존재하지 않음');
+                    if (statusEl) {
+                        statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
+                    }
+                    alert('📭 Firebase에 사용자 문서가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                    resolve(false);
+                }
+            }).catch(error => {
+                console.error('❌ Firebase 사용자 로드 에러:', error);
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
+                }
+                alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
+                resolve(false);
+            });
+        });
+    };
+    
+    // 당원 데이터 Firebase 로드
+    window.loadMemberDataFromFirebase = function() {
+        return new Promise((resolve, reject) => {
+            if (!isFirebaseReady || !db) {
+                reject(new Error('Firebase 연결이 필요합니다.'));
+                return;
+            }
+            
+            const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '📥 Firebase에서 당원 데이터를 불러오는 중...';
+            }
+            
+            getDoc(doc(db, 'memberData', 'metadata')).then((metaDoc) => {
+                if (metaDoc.exists()) {
+                    const metaData = metaDoc.data();
+                    
+                    if (metaData.syncVersion === '3.0') {
+                        loadChunkedData(metaData, statusEl).then(resolve).catch(() => {
+                           console.warn('⚠️ 청크 데이터 로드 실패, 구 형식으로 재시도합니다.');
+                           loadLegacyData(statusEl).then(resolve).catch(reject);
+                        });
+                    } else {
+                        loadLegacyData(statusEl).then(resolve).catch(reject);
+                    }
+                } else {
+                    loadLegacyData(statusEl).then(resolve).catch(reject);
+                }
+            }).catch(error => {
+                console.error('Firebase 메타데이터 로드 에러:', error);
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 메타데이터 로드 실패: ${error.message}`;
+                }
+                // 메타데이터 로드 실패 시 구 형식으로 시도
+                loadLegacyData(statusEl).then(resolve).catch(reject);
+            });
+        });
+    };
+// 열 설정 저장 
+    window.saveColumnSettingsToFirebase = function() {
+    return new Promise((resolve, reject) => {
+        if (!isFirebaseReady || !db) {
+            reject(new Error('Firebase 연결이 필요합니다.'));
+            return;
+        }
+
+        console.log('🔄 열 설정만 Firebase에 저장하는 중...');
+        const statusEl = document.getElementById('syncStatus');
+        if (statusEl) {
+            statusEl.innerHTML = '⚙️ 열 설정을 Firebase에 저장 중...';
+        }
+
+        const columnSettings = window.columnSettings;
+        if (!columnSettings) {
+            reject(new Error('저장할 열 설정 정보가 없습니다.'));
+            return;
+        }
+        
+        // metadata 문서만 업데이트합니다.
+        const metaDocRef = doc(db, 'memberData', 'metadata');
+        updateDoc(metaDocRef, {
+            columnSettings: columnSettings,
+            lastColumnSettingsSync: new Date().toISOString()
+        }).then(() => {
+            console.log('✅ 열 설정 저장 성공');
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 열 설정이 성공적으로 저장되었습니다.`;
+            }
+            alert('✅ 열 설정이 성공적으로 저장되었습니다.');
+            resolve(true);
+        }).catch(error => {
+            console.error('❌ 열 설정 저장 에러:', error);
+            if (statusEl) {
+                statusEl.innerHTML = `❌ 열 설정 저장 실패: ${error.message}`;
+            }
+            alert(`❌ 열 설정 저장 실패\n\n${error.message}`);
+            reject(error);
+        });
+    });
+};
+    
+    // 사용자 정보 Firebase 동기화
+    window.syncUsersToFirebase = function() {
+        return new Promise((resolve, reject) => {
+            console.log('🔄 사용자 동기화 시작...');
+            console.log('현재 사용자 데이터:', window.users);
+            console.log('Firebase 연결 상태:', isFirebaseReady, !!db);
+            
+            if (!isFirebaseReady || !db) {
+                const errorMsg = 'Firebase 연결이 필요합니다.';
+                console.error('❌', errorMsg);
+                alert('❌ Firebase 연결이 필요합니다.\n\n오프라인 모드에서는 로컬 저장소만 사용됩니다.');
+                reject(new Error(errorMsg));
+                return;
+            }
+            
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '👥 사용자 데이터를 Firebase에 동기화하는 중...';
+            }
+            
+            const syncData = {
+                users: window.users,
+                lastSync: new Date().toISOString(),
+                syncVersion: '2.0',
+                totalUsers: Object.keys(window.users).length
+            };
+            
+            console.log('동기화할 데이터:', syncData);
+            
+            setDoc(doc(db, 'system', 'users'), syncData).then(() => {
+                console.log('✅ Firebase 사용자 동기화 성공');
+                if (statusEl) {
+                    statusEl.innerHTML = `✅ 사용자 데이터가 성공적으로 동기화되었습니다. (${Object.keys(window.users).length}명)`;
+                }
+                
+                setTimeout(() => {
+                    alert(`✅ 사용자 정보가 Firebase에 동기화되었습니다!\n\n👥 총 ${Object.keys(window.users).length}명의 사용자\n📅 동기화 시간: ${new Date().toLocaleString('ko-KR')}\n\n이제 다른 사용자들이 시스템에 접근할 수 있습니다.`);
+                }, 100);
+                
+                resolve(true);
+            }).catch(error => {
+                console.error('❌ Firebase 사용자 동기화 에러:', error);
+                console.error('에러 상세:', error.code, error.message);
+                
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
+                }
+                
+                let errorDetail = '';
+                if (error.code === 'permission-denied') {
+                    errorDetail = '\n\n🔐 권한 오류: Firestore 보안 규칙을 확인해주세요.\nFirebase Console → Firestore Database → 규칙에서\nallow read, write: if true; 로 설정하세요.';
+                } else if (error.code === 'unavailable') {
+                    errorDetail = '\n\n🌐 네트워크 오류: 인터넷 연결을 확인해주세요.';
+                }
+                
+                alert(`❌ 사용자 동기화 실패\n\n오류: ${error.message}${errorDetail}`);
+                reject(error);
+            });
+        });
+    };
+    
+    // 당원 데이터 Firebase 동기화
+    window.syncMemberDataToFirebase = function() {
+        return new Promise((resolve, reject) => {
+            if (!isFirebaseReady || !db) {
+                reject(new Error('Firebase 연결이 필요합니다.'));
+                return;
+            }
+            
+            if (!window.currentData || window.currentData.length <= 1) {
+                reject(new Error('먼저 당원 데이터를 업로드해주세요.'));
+                return;
+            }
+            
+            const statusEl = document.getElementById('syncStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '📊 당원 데이터를 Firebase에 동기화하는 중...';
+            }
+            
+            try {
+                const convertedData = [];
+                
+                for (let i = 1; i < window.currentData.length; i++) {
+                    const row = window.currentData[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const name = row[window.columnSettings.name - 1] || '';
+                    if (!name.toString().trim()) continue;
+                    
+                    const memberObj = {
+                        id: i,
+                        name: name,
+                        dob: row[window.columnSettings.dob - 1] || '',
+                        phone: window.columnSettings.phone > 0 ? (row[window.columnSettings.phone - 1] || '') : '',
+                        dong: window.columnSettings.dong > 0 ? (row[window.columnSettings.dong - 1] || '') : '',
+                        age: window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0,
+                        ageGroup: window.getAgeGroup ? window.getAgeGroup(window.calculateAge ? window.calculateAge(row[window.columnSettings.dob - 1] || '') : 0) : ''
+                    };
+                    
+                    convertedData.push(memberObj);
+                }
+                
+                const CHUNK_SIZE = 50;
+                const chunks = [];
+                
+                for (let i = 0; i < convertedData.length; i += CHUNK_SIZE) {
+                    chunks.push(convertedData.slice(i, i + CHUNK_SIZE));
+                }
+                
+                if (statusEl) {
+                    statusEl.innerHTML = `📊 데이터를 ${chunks.length}개 청크로 분할하여 동기화 중...`;
+                }
+                
+                const metaData = {
+                    columnSettings: window.columnSettings,
+                    lastSync: new Date().toISOString(),
+                    totalMembers: convertedData.length,
+                    totalChunks: chunks.length,
+                    headers: window.currentData.length > 0 ? window.currentData[0] : [],
+                    syncVersion: '3.0'
+                };
+                
+                const metaPromise = setDoc(doc(db, 'memberData', 'metadata'), metaData);
+                
+                const chunkPromises = chunks.map((chunk, index) => {
+                    return setDoc(doc(db, 'memberData', `chunk_${index}`), {
+                        chunkIndex: index,
+                        members: chunk,
+                        chunkSize: chunk.length,
+                        lastSync: new Date().toISOString()
+                    });
+                });
+                
+                Promise.all([metaPromise, ...chunkPromises]).then(() => {
+                    if (statusEl) {
+                        statusEl.innerHTML = `✅ 당원 데이터가 성공적으로 동기화되었습니다. (${convertedData.length}명, ${chunks.length}개 청크)`;
+                    }
+                    console.log('Firebase 청크 동기화 완료:', convertedData.length, '명,', chunks.length, '개 청크');
+                    resolve({
+                        success: true,
+                        count: convertedData.length,
+                        chunks: chunks.length
+                    });
+                }).catch(error => {
+                    console.error('Firebase 청크 동기화 에러:', error);
+                    if (statusEl) {
+                        statusEl.innerHTML = `❌ 동기화 실패: ${error.message}`;
+                    }
+                    reject(error);
+                });
+                
+            } catch (error) {
+                console.error('데이터 변환 에러:', error);
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 데이터 변환 실패: ${error.message}`;
+                }
+                reject(error);
+            }
+        });
+    };
+    
+    // Firebase 연결 상태 확인
+    window.checkFirebaseConnection = function() {
+        console.log('🔍 Firebase 연결 상태 확인...');
+        
+        const isConnected = isFirebaseReady && db && window.firebaseInitialized;
+        
+        if (!isConnected) {
+            alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.');
+        } else {
+            alert('✅ Firebase 연결 상태 양호\n\n모든 클라우드 기능을 사용할 수 있습니다.');
+        }
+        
+        return isConnected;
+    };
+    
+    // 사용자 자격 증명 다운로드
+    window.downloadUserCredentials = function() {
+        const userList = Object.keys(window.users).map(username => ({
+            사용자ID: username,
+            비밀번호: window.users[username].password,
+            권한수: window.users[username].permissions.length,
+            권한목록: window.users[username].permissions.join(', ')
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(userList);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '사용자목록');
+        
+        const fileName = `사용자_계정_목록_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        alert(`${fileName} 파일이 다운로드되었습니다.`);
+    };
+
+    // 불러온 결과 저장 (새로 추가된 기능)
+    window.saveLoadedDataToExcel = function() {
+        return new Promise((resolve, reject) => {
+            console.log('📥 불러온 결과 저장 시작...');
+            const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
+
+            if (!window.currentData || window.currentData.length <= 1) {
+                const errorMsg = '저장할 데이터가 없습니다. 먼저 당원 데이터를 불러와주세요.';
+                if (statusEl) {
+                    statusEl.innerHTML = `⚠️ ${errorMsg}`;
+                }
+                alert(`⚠️ ${errorMsg}`);
+                reject(new Error(errorMsg));
+                return;
+            }
+
+            console.log('✅ 데이터 확인, Excel 파일 생성 시작, 데이터 수:', window.currentData.length - 1);
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 데이터 로드 성공, Excel 파일 생성 중...`;
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(window.currentData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '당원목록');
+
+            const fileName = `불러온_당원_데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            alert(`✅ ${fileName} 파일이 다운로드되었습니다.\n\n📊 총 ${window.currentData.length - 1}명의 데이터`);
+            console.log('✅ 파일 다운로드 완료');
+
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 불러온 당원 데이터 저장 완료 (${window.currentData.length - 1}명)`;
+            }
+            resolve({ count: window.currentData.length - 1, success: true });
+        });
+    };
+    
+}
+// 아래는 defineFirebaseFunctions() 함수 바깥에 위치해야 합니다.
+// 청크 기반 데이터 로드
+async function loadChunkedData(metaData, statusEl) {
+    if (statusEl) {
+        statusEl.innerHTML = `📥 ${metaData.totalChunks}개 청크에서 데이터를 불러오는 중...`;
+    }
+    
+    const chunkPromises = [];
+    for (let i = 0; i < metaData.totalChunks; i++) {
+        const chunkPromise = getDoc(doc(db, 'memberData', `chunk_${i}`));
+        chunkPromises.push(chunkPromise);
+    }
+    
+    const chunkDocs = await Promise.all(chunkPromises);
+    let allMembers = [];
+    let loadedChunks = 0;
+    
+    chunkDocs.forEach((chunkDoc) => {
+        if (chunkDoc.exists()) {
+            const chunkData = chunkDoc.data();
+            if (chunkData.members) {
+                allMembers = allMembers.concat(chunkData.members);
+                loadedChunks++;
+            }
+        }
+    });
+    
+    if (allMembers.length > 0) {
+        updateUI(allMembers, metaData, statusEl, loadedChunks);
+        
+        return {
+            success: true,
+            count: allMembers.length,
+            chunks: loadedChunks,
+            totalChunks: metaData.totalChunks,
+            lastSync: metaData.lastSync
+        };
+    } else {
+        if (statusEl) {
+            statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
+        }
+        throw new Error('불러온 데이터가 없습니다.');
+    }
+}
+
+// 구 형식 데이터 로드
+async function loadLegacyData(statusEl) {
+    const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
+    
+    if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        
+        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
+            updateUI(data.members, data, statusEl, 1);
+            
+            return {
+                success: true,
+                count: data.members.length,
+                lastSync: data.lastSync,
+                format: 'legacy'
+            };
+        } else {
+            if (statusEl) {
+                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않거나 데이터가 비어있습니다.';
+            }
+            throw new Error('데이터 형식이 올바르지 않거나 데이터가 비어있습니다.');
+        }
+    } else {
+        if (statusEl) {
+            statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
+        }
+        throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
+    }
+}
+
+// 공통 데이터 변환 및 UI 업데이트 함수
+function updateUI(members, metaData, statusEl, loadedChunks) {
+    const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+    const convertedData = [headers];
+    
+    members.forEach(member => {
+        const row = new Array(headers.length).fill('');
+        const columnSettings = metaData.columnSettings || {};
+        if (columnSettings.name) row[columnSettings.name - 1] = member.name || '';
+        if (columnSettings.dob) row[columnSettings.dob - 1] = member.dob || '';
+        if (columnSettings.phone > 0) row[columnSettings.phone - 1] = member.phone || '';
+        if (columnSettings.dong > 0) row[columnSettings.dong - 1] = member.dong || '';
+        convertedData.push(row);
+    });
+    
+    window.currentData = convertedData;
+    window.columnSettings = metaData.columnSettings || window.columnSettings;
+
+    if (window.saveDataToStorage) window.saveDataToStorage();
+    
+    const selectedFileEl = document.getElementById('selectedFile');
+    if (selectedFileEl) {
+        selectedFileEl.textContent = `✅ Firebase에서 불러온 데이터 (${metaData.syncVersion === '3.0' ? '청크 기반' : '구 형식'})`;
+    }
+    const nameColEl = document.getElementById('nameCol');
+    const dobColEl = document.getElementById('dobCol');
+    const phoneColEl = document.getElementById('phoneCol');
+    const dongColEl = document.getElementById('dongCol');
+    if (nameColEl) nameColEl.value = window.columnSettings.name;
+    if (dobColEl) dobColEl.value = window.columnSettings.dob;
+    if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
+    if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
+
+    const memberCount = members.length;
+    if (headers.length > 0) {
+        if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
+        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터', memberCount);
+    }
+    
+    if (statusEl) {
+        const formatInfo = metaData.syncVersion === '3.0' ? `(${loadedChunks}/${metaData.totalChunks} 청크)` : '(구 형식)';
+        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명) ${formatInfo}`;
+    }
+    
+    // **수정된 핵심 부분:** 데이터 로드 후 모든 UI 업데이트 함수를 확실하게 호출합니다.
+    window.updateSystemAfterDataLoad();
+}
+
+// 실시간 연결 상태 모니터링
+function startConnectionMonitoring() {
+    if (!db) return;
+    setInterval(async () => {
+        try {
+            if (connectionRetryCount >= maxRetries) {
+                console.log('최대 재시도 횟수 초과. 오프라인 모드로 전환');
+                activateOfflineMode();
+                return;
+            }
+            await performConnectionTest();
+            if (window.updateFirebaseStatus) {
+                window.updateFirebaseStatus(true, '연결 양호');
+            }
+            connectionRetryCount = 0;
+        } catch (error) {
+            connectionRetryCount++;
+            console.error(`연결 상태 확인 실패 (${connectionRetryCount}/${maxRetries}):`, error);
+            if (connectionRetryCount >= maxRetries) {
+                if (window.updateFirebaseStatus) {
+                    window.updateFirebaseStatus(false, '오프라인 모드');
+                }
+                activateOfflineMode();
+            } else {
+                if (window.updateFirebaseStatus) {
+                    window.updateFirebaseStatus(false, `재연결 시도 중 (${connectionRetryCount}/${maxRetries})`);
+                }
+            }
+        }
+    }, 30000);
+}
+
+// 오프라인 모드 활성화
+function activateOfflineMode() {
+    console.log('🔌 오프라인 모드 활성화');
+    window.isOfflineMode = true;
+    setTimeout(() => {
+        if (window.updateFirebaseStatus) {
+            window.updateFirebaseStatus(false, '오프라인 모드 (로컬 저장소만 사용)');
+        }
+        if (window.showOfflineNotice) {
+            window.showOfflineNotice();
+        }
+    }, 100);
+}
+
+document.querySelectorAll('.tab-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+        button.classList.add('active');
+        const tabId = button.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+
+        if (tabId === 'statistics') {
+            window.updateCharts();
+        }
+        
+        if (tabId === 'member-search') {
+            window.updateSearchFilters();
+        }
+        
+        if (tabId === 'birthday-search') {
+            window.updateBirthdayList();
+        }
+    });
+});
+
+window.currentData = null;
+window.columnSettings = { name: 1, dob: 2, phone: 3, dong: 4 };
+window.users = {};
+let ageChartInstance = null;
+let dongChartInstance = null;
+
+// 데이터 로드 후 시스템 UI를 업데이트하는 메인 함수
+window.updateSystemAfterDataLoad = function() {
+    window.displayAllMembers();
+    window.updateCharts();
+    window.updateSearchFilters();
+    window.updateBirthdayList();
+};
+
+window.displayAllMembers = function(data = window.currentData) {
+    const tableBody = document.getElementById('tableBody');
+    const tableHeader = document.getElementById('tableHeader');
+    
+    if (!data || data.length <= 1) {
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">데이터가 없습니다. 파일을 업로드하거나 Firebase에서 불러오세요.</td></tr>';
+        tableHeader.innerHTML = '';
+        return;
+    }
+
+    const headers = data[0];
+    const rows = data.slice(1);
+    
+    tableHeader.innerHTML = headers.map(header => `<th>${header}</th>`).join('');
+    
+    tableBody.innerHTML = rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+};
+
+window.updateCharts = function() {
+    if (!window.currentData) {
+        document.getElementById('statisticsStatus').textContent = '통계를 보려면 먼저 데이터를 불러오세요.';
+        return;
+    }
+    
+    document.getElementById('statisticsStatus').textContent = '';
+
+    const members = window.currentData.slice(1).map(row => ({
+        age: window.calculateAge(row[window.columnSettings.dob - 1] || ''),
+        dong: row[window.columnSettings.dong - 1] || '기타'
+    }));
+
+    const ageCounts = members.reduce((acc, member) => {
+        if (member.age > 0) {
+            const ageGroup = window.getAgeGroup(member.age);
+            acc[ageGroup] = (acc[ageGroup] || 0) + 1;
+        }
+        return acc;
+    }, {});
+
+    const sortedAgeGroups = Object.keys(ageCounts).sort((a, b) => {
+        const getSortValue = (group) => {
+            if (group.includes('10대')) return 10;
+            if (group.includes('20대')) return 20;
+            if (group.includes('30대')) return 30;
+            if (group.includes('40대')) return 40;
+            if (group.includes('50대')) return 50;
+            if (group.includes('60대')) return 60;
+            if (group.includes('70대')) return 70;
+            return 90;
+        };
+        return getSortValue(a) - getSortValue(b);
+    });
+
+    const ageData = {
+        labels: sortedAgeGroups,
+        datasets: [{
+            label: '당원 수',
+            data: sortedAgeGroups.map(group => ageCounts[group]),
+            backgroundColor: 'rgba(0, 123, 255, 0.5)',
+            borderColor: 'rgba(0, 123, 255, 1)',
+            borderWidth: 1
+        }]
+    };
+
+    if (ageChartInstance) { ageChartInstance.destroy(); }
+    const ageCtx = document.getElementById('ageChart').getContext('2d');
+    ageChartInstance = new Chart(ageCtx, { type: 'bar', data: ageData, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
+
+    const dongCounts = members.reduce((acc, member) => {
+        const dong = member.dong.trim() || '기타';
+        acc[dong] = (acc[dong] || 0) + 1;
+        return acc;
+    }, {});
+    
+    const dongLabels = Object.keys(dongCounts).sort();
+    const dongData = {
+        labels: dongLabels,
+        datasets: [{
+            label: '당원 수',
+            data: dongLabels.map(dong => dongCounts[dong]),
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.5)', 'rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)',
+                'rgba(75, 192, 192, 0.5)', 'rgba(153, 102, 255, 0.5)', 'rgba(255, 159, 64, 0.5)'
+            ],
+            borderColor: [
+                'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    if (dongChartInstance) { dongChartInstance.destroy(); }
+    const dongCtx = document.getElementById('dongChart').getContext('2d');
+    dongChartInstance = new Chart(dongCtx, { type: 'pie', data: dongData, options: { responsive: true } });
+};
+
+window.updateSearchFilters = function() {
+    if (!window.currentData) return;
+    const dongCol = window.columnSettings.dong - 1;
+    if (dongCol < 0) return;
+
+    const dongs = [...new Set(window.currentData.slice(1).map(row => (row[dongCol] || '').trim()).filter(d => d))];
+    dongs.sort();
+    
+    const selectEl = document.getElementById('searchDong');
+    selectEl.innerHTML = '<option value="">읍/면/동 전체</option>' +
+        dongs.map(dong => `<option value="${dong}">${dong}</option>`).join('');
+};
+
+window.searchMembers = function() {
+    if (!window.currentData) {
+        document.getElementById('searchStatus').textContent = '검색을 하려면 먼저 데이터를 불러오세요.';
+        return;
+    }
+
+    const query = document.getElementById('searchQuery').value.toLowerCase().trim();
+    const dong = document.getElementById('searchDong').value.trim();
+    const tableBody = document.getElementById('searchTableBody');
+    const tableHeader = document.getElementById('searchTableHeader');
+    const statusEl = document.getElementById('searchStatus');
+
+    if (!query && !dong) {
+        statusEl.textContent = '검색어를 입력하거나 읍/면/동을 선택하세요.';
+        tableBody.innerHTML = '';
+        tableHeader.innerHTML = '';
+        return;
+    }
+
+    const headers = window.currentData[0];
+    tableHeader.innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+
+    const nameCol = window.columnSettings.name - 1;
+    const phoneCol = window.columnSettings.phone - 1;
+    const dongCol = window.columnSettings.dong - 1;
+
+    const results = window.currentData.slice(1).filter(row => {
+        const rowName = (row[nameCol] || '').toLowerCase();
+        const rowPhone = (row[phoneCol] || '').toLowerCase().replace(/[^0-9]/g, '');
+        const rowDong = (row[dongCol] || '').trim();
+        
+        const matchesQuery = query ? rowName.includes(query) || rowPhone.includes(query.replace(/[^0-9]/g, '')) : true;
+        const matchesDong = dong ? rowDong === dong : true;
+        
+        return matchesQuery && matchesDong;
+    });
+
+    if (results.length > 0) {
+        statusEl.textContent = `${results.length}명의 검색 결과가 있습니다.`;
+        tableBody.innerHTML = results.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    } else {
+        statusEl.textContent = '일치하는 당원을 찾을 수 없습니다.';
+        tableBody.innerHTML = '';
+    }
+};
+
+window.updateBirthdayList = function() {
+    if (!window.currentData) {
+        document.getElementById('birthdayStatus').textContent = '생일 검색을 하려면 먼저 데이터를 불러오세요.';
+        return;
+    }
+    
+    document.getElementById('birthdayStatus').textContent = '원하는 월을 선택하고 검색하세요.';
+    document.getElementById('birthdayList').innerHTML = '';
+};
+
+window.searchBirthdays = function() {
+    if (!window.currentData) {
+        document.getElementById('birthdayStatus').textContent = '생일 검색을 하려면 먼저 데이터를 불러오세요.';
+        return;
+    }
+    const month = parseInt(document.getElementById('searchMonth').value, 10);
+    const listEl = document.getElementById('birthdayList');
+    const statusEl = document.getElementById('birthdayStatus');
+    
+    if (!month) {
+        statusEl.textContent = '검색할 월을 선택해주세요.';
+        listEl.innerHTML = '';
+        return;
+    }
+
+    const dobCol = window.columnSettings.dob - 1;
+    const nameCol = window.columnSettings.name - 1;
+
+    const results = window.currentData.slice(1).filter(row => {
+        const dob = row[dobCol];
+        if (!dob) return false;
+        try {
+            const date = new Date(dob);
+            return date.getMonth() + 1 === month;
+        } catch {
+            return false;
+        }
+    }).map(row => ({
+        name: row[nameCol],
+        dob: row[dobCol]
+    }));
+    
+    if (results.length > 0) {
+        statusEl.textContent = `${month}월에 생일인 당원 ${results.length}명`;
+        listEl.innerHTML = results.map(member => {
+            return `<li><span>${member.name}</span><span class="badge badge-info">${member.dob}</span></li>`;
+        }).join('');
+    } else {
+        statusEl.textContent = '해당 월에 생일인 당원이 없습니다.';
+        listEl.innerHTML = '';
+    }
+};
+
+window.calculateAge = function(dob) {
+    if (!dob) return 0;
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
+
+window.getAgeGroup = function(age) {
+    if (age <= 19) return '10대 이하';
+    if (age <= 29) return '20대';
+    if (age <= 39) return '30대';
+    if (age <= 49) return '40대';
+    if (age <= 59) return '50대';
+    if (age <= 69) return '60대';
+    if (age <= 79) return '70대';
+    return '80대 이상';
+};
+
+window.updateFirebaseStatus = function(isConnected, message) {
+    const indicator = document.getElementById('firebaseConnectionIndicator');
+    const statusText = document.getElementById('firebaseConnectionStatus');
+    if (isConnected) {
+        indicator.classList.remove('disconnected');
+        indicator.classList.add('connected');
+    } else {
+        indicator.classList.remove('connected');
+        indicator.classList.add('disconnected');
+    }
+    statusText.textContent = message;
+};
+
+window.updateHeaderInfo = function(headers) {
+    const selects = document.querySelectorAll('#columnSettings select');
+    selects.forEach(select => {
+        select.innerHTML = '<option value="">선택 안 함</option>';
+        headers.forEach((header, index) => {
+            select.innerHTML += `<option value="${index + 1}">${header} (열 ${index + 1})</option>`;
+        });
+        select.disabled = false;
+    });
+
+    document.getElementById('nameCol').value = window.columnSettings.name || '';
+    document.getElementById('dobCol').value = window.columnSettings.dob || '';
+    document.getElementById('phoneCol').value = window.columnSettings.phone || '';
+    document.getElementById('dongCol').value = window.columnSettings.dong || '';
+    
+    document.getElementById('columnSettingsStatus').textContent = '데이터를 바탕으로 열 설정을 완료하세요.';
+};
+
+window.updateCurrentFileInfo = function(fileName, memberCount) {
+    document.getElementById('selectedFile').textContent = fileName;
+    document.getElementById('memberCountInfo').textContent = `${memberCount}명`;
+};
+
+window.login = function() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const loginMessage = document.getElementById('loginMessage');
+    
+    if (window.users[username] && window.users[username].password === password) {
+        window.currentUser = username;
+        localStorage.setItem('lastLoginUser', username);
+        loginMessage.textContent = '로그인 성공!';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('currentUser').textContent = `사용자: ${username}`;
+        
+        window.updatePermissionsUI();
+    } else {
+        loginMessage.textContent = '잘못된 사용자 ID 또는 비밀번호입니다.';
+    }
+};
+
+window.logout = function() {
+    window.currentUser = null;
+    localStorage.removeItem('lastLoginUser');
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('loginMessage').textContent = '';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('currentUser').textContent = '로그인 필요';
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="data-manage"]').classList.add('active');
+    document.querySelector('#data-manage').classList.add('active');
+};
+
+window.displayUserList = function() {
+    const userListEl = document.getElementById('userList');
+    userListEl.innerHTML = '';
+    for (const username in window.users) {
+        if (window.users.hasOwnProperty(username)) {
+            const user = window.users[username];
+            const permissions = user.permissions.join(', ');
+            userListEl.innerHTML += `
+                <tr>
+                    <td>${username}</td>
+                    <td>${user.password}</td>
+                    <td>${permissions}</td>
+                    <td><button class="btn btn-danger btn-sm" onclick="safeCallFunction('removeUser', '${username}')">삭제</button></td>
+                </tr>
+            `;
+        }
+    }
+};
+
+window.addUser = function() {
+    const username = document.getElementById('newUsername').value;
+    const password = document.getElementById('newPassword').value;
+    const permissions = document.getElementById('newPermissions').value.split(',').map(p => p.trim());
+    
+    if (username && password) {
+        window.users[username] = { password, permissions };
+        if (window.saveUsersToStorage) {
+            window.saveUsersToStorage();
+        }
+        window.displayUserList();
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newPermissions').value = '';
+        alert('✅ 사용자가 추가되었습니다.');
+    } else {
+        alert('❌ 사용자 ID와 비밀번호를 모두 입력해주세요.');
+    }
+};
+
+window.removeUser = function(username) {
+    if (confirm(`정말 사용자 '${username}'을(를) 삭제하시겠습니까?`)) {
+        delete window.users[username];
+        if (window.saveUsersToStorage) {
+            window.saveUsersToStorage();
+        }
+        window.displayUserList();
+        alert('✅ 사용자가 삭제되었습니다.');
+    }
+};
+
+window.saveUsersToStorage = function() {
+    localStorage.setItem('appUsers', JSON.stringify(window.users));
+};
+
+window.loadUsersFromStorage = function() {
+    const savedUsers = localStorage.getItem('appUsers');
+    if (savedUsers) {
+        window.users = JSON.parse(savedUsers);
+    }
+};
+
+window.updatePermissionsUI = function() {
+    const user = window.users[window.currentUser];
+    if (user && !user.permissions.includes('admin')) {
+        document.querySelector('.tab-btn[data-tab="user-manage"]').style.display = 'none';
+        document.getElementById('firebaseDataSection').style.display = 'none';
+        document.getElementById('columnSettingsCard').style.display = 'none';
+    } else {
+        document.querySelector('.tab-btn[data-tab="user-manage"]').style.display = 'block';
+        document.getElementById('firebaseDataSection').style.display = 'block';
+        document.getElementById('columnSettingsCard').style.display = 'block';
+    }
+};
+
+window.saveDataToStorage = function() {
+    if (window.currentData) {
+        const dataToSave = {
+            data: window.currentData,
+            columnSettings: window.columnSettings
+        };
+        localStorage.setItem('lastLoadedData', JSON.stringify(dataToSave));
+        console.log('데이터가 로컬 저장소에 저장되었습니다.');
+    }
+};
+
+window.loadDataFromStorage = function() {
+    const savedData = localStorage.getItem('lastLoadedData');
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        window.currentData = data.data;
+        window.columnSettings = data.columnSettings;
+        console.log('로컬 저장소에서 데이터가 로드되었습니다.');
+        window.updateSystemAfterDataLoad(); 
+        
+        const memberCount = window.currentData.length > 1 ? window.currentData.length - 1 : 0;
+        window.updateCurrentFileInfo('로컬 저장된 데이터', memberCount);
+    }
+};
+const fileInput = document.getElementById('fileInput');
+const fileInputLabel = document.getElementById('fileInputLabel');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    fileInputLabel.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+});
+
+['dragenter', 'dragover'].forEach(eventName => {
+    fileInputLabel.addEventListener(eventName, () => fileInputLabel.classList.add('is-dragover'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    fileInputLabel.addEventListener(eventName, () => fileInputLabel.classList.remove('is-dragover'), false);
+});
+
+fileInputLabel.addEventListener('drop', handleDrop, false);
+fileInput.addEventListener('change', handleFiles, false);
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files;
+    handleFiles({ target: fileInput });
+}
+
+function handleFiles(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+        const file = files[0];
+        fileInputLabel.textContent = `✅ ${file.name}`;
+        fileInputLabel.classList.add('has-file');
+    } else {
+        fileInputLabel.textContent = '파일을 선택하거나 드래그 앤 드롭하세요';
+        fileInputLabel.classList.remove('has-file');
+    }
+}
+
+window.processFile = function() {
+    const file = fileInput.files[0];
+    if (!file) {
+        alert('파일을 먼저 선택해주세요.');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        window.currentData = jsonData;
+        
+        if (jsonData.length > 0) {
+            window.updateHeaderInfo(jsonData[0]);
+        }
+        
+        window.saveDataToStorage();
+
+        window.updateSystemAfterDataLoad();
+        
+        const memberCount = jsonData.length > 1 ? jsonData.length - 1 : 0;
+        window.updateCurrentFileInfo(file.name, memberCount);
+
+        alert(`✅ 파일 '${file.name}'이(가) 성공적으로 로드되었습니다. (${memberCount}명)`);
+    };
+    reader.readAsArrayBuffer(file);
+};
+
+window.updateColumnSettings = function() {
+    const nameCol = document.getElementById('nameCol').value;
+    const dobCol = document.getElementById('dobCol').value;
+    const phoneCol = document.getElementById('phoneCol').value;
+    const dongCol = document.getElementById('dongCol').value;
+
+    window.columnSettings = {
+        name: parseInt(nameCol),
+        dob: parseInt(dobCol),
+        phone: parseInt(phoneCol),
+        dong: parseInt(dongCol)
+    };
+    
+    window.saveDataToStorage();
+    
+    window.updateSystemAfterDataLoad();
+
+    document.getElementById('columnSettingsStatus').textContent = '✅ 열 설정이 업데이트되었습니다. 자동으로 데이터가 재정렬됩니다.';
+};
+
+console.log('🚀 Firebase 초기화 시작...');
+startFirebaseConnection();
+
+window.onload = function() {
+    window.loadUsersFromStorage();
+    window.loadDataFromStorage();
+    
+    const lastLoginUser = localStorage.getItem('lastLoginUser');
+    if (lastLoginUser && window.users[lastLoginUser]) {
+        window.currentUser = lastLoginUser;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('currentUser').textContent = `사용자: ${lastLoginUser}`;
+        window.updatePermissionsUI();
+    } else {
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+    }
+};
+
+</script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
+        .firebase-status { position: fixed; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.95); padding: 8px 12px; border-radius: 20px; font-size: 0.8em; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; }
+        .connection-indicator { width: 8px; height: 8px; border-radius: 50%; background: #dc3545; animation: pulse 2s infinite; }
+        .connection-indicator.connected { background: #28a745; }
+        .connection-indicator.disconnected { background: #dc3545; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; background: rgba(255, 255, 255, 0.95); padding: 30px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); position: relative; }
+        .current-user { position: absolute; top: 15px; left: 20px; background: #007bff; color: white; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; }
+        .logout-btn { position: absolute; top: 15px; right: 20px; background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: background 0.2s; }
+        .logout-btn:hover { background: #c82333; }
+        .main-title { font-size: 2.5em; color: #343a40; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .subtitle { font-size: 1.2em; color: #6c757d; margin-top: 5px; }
+        .app-status { margin-top: 15px; padding: 10px; background-color: #e9ecef; border-radius: 10px; font-size: 0.9em; display: flex; justify-content: space-between; align-items: center; }
+        .app-status span { font-weight: bold; }
+        .tab-buttons { display: flex; justify-content: center; margin-bottom: 20px; }
+        .tab-btn { padding: 12px 25px; border: none; background: rgba(255, 255, 255, 0.5); color: #343a40; cursor: pointer; font-size: 1.1em; font-weight: bold; transition: all 0.3s ease; border-radius: 10px 10px 0 0; }
+        .tab-btn:hover { background: rgba(255, 255, 255, 0.8); }
+        .tab-btn.active { background: #fff; color: #007bff; border-bottom: 3px solid #007bff; }
+        .tab-content { background: #fff; padding: 30px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .card { background: #f8f9fa; border: 1px solid #e2e6ea; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; color: #007bff; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #495057; }
+        input[type="file"], input[type="text"], input[type="password"], select { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px; font-size: 1em; transition: border-color 0.2s; }
+        input[type="text"]:focus, input[type="password"]:focus, select:focus { border-color: #007bff; outline: none; }
+        .btn { display: inline-block; padding: 10px 20px; font-size: 1em; font-weight: bold; text-align: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; border: none; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-info { background-color: #17a2b8; color: white; }
+        .btn-info:hover { background-color: #117a8b; }
+        .btn-block { display: block; width: 100%; }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 15px; font-size: 0.95em; }
+        .alert-info { background-color: #e2f4f7; border-color: #b8e9f2; color: #0f6674; }
+        .alert-danger { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .table-responsive { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95em; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        .table th { background-color: #e9ecef; font-weight: bold; color: #495057; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(0,0,0,0.05); }
+        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+        .badge-info { color: #fff; background-color: #17a2b8; }
+        .chart-container { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; }
+        
+        #fileInputLabel { display: block; width: 100%; padding: 30px; border: 2px dashed #ced4da; border-radius: 5px; text-align: center; color: #6c757d; cursor: pointer; transition: all 0.2s; }
+        #fileInputLabel:hover, #fileInputLabel.is-dragover { background-color: #f1f3f5; border-color: #007bff; }
+        #fileInputLabel.has-file { border-color: #28a745; background-color: #e9f5e9; color: #28a745; }
+        #fileInput { display: none; }
+        
+        #loginScreen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+        #loginCard {
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        #loginCard h2 {
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+        #loginCard .form-group {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen">
+    <div id="loginCard">
+        <h2>당원관리 시스템 로그인</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">사용자 ID</label>
+                <input type="text" id="username" class="form-control" placeholder="사용자 ID" required>
+            </div>
+            <div class="form-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" class="form-control" placeholder="비밀번호" required>
+            </div>
+            <button type="button" class="btn btn-primary btn-block" onclick="window.login()">로그인</button>
+        </form>
+        <p id="loginMessage" class="alert mt-3"></p>
+    </div>
+</div>
+
+<div id="mainApp" style="display: none;">
+    
+    <div class="firebase-status">
+        <div id="firebaseConnectionIndicator" class="connection-indicator disconnected"></div>
+        <span id="firebaseConnectionStatus">연결 확인 중...</span>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <span id="currentUser" class="current-user"></span>
+            <button class="logout-btn" onclick="window.logout()">로그아웃</button>
+            <h1 class="main-title">더불어민주당 원주갑 당원관리 시스템</h1>
+            <p class="subtitle">엑셀 파일 기반의 당원 데이터 관리 및 분석 솔루션</p>
+            <div class="app-status">
+                <span id="selectedFile">파일을 선택하거나 Firebase에서 불러오세요.</span>
+                <span id="memberCountInfo">0명</span>
+            </div>
+        </div>
+        
+        <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="data-manage">데이터 관리</button>
+            <button class="tab-btn" data-tab="all-members">전체 당원</button>
+            <button class="tab-btn" data-tab="statistics">통계</button>
+            <button class="tab-btn" data-tab="member-search">당원 검색</button>
+            <button class="tab-btn" data-tab="birthday-search">생일 검색</button>
+            <button class="tab-btn" data-tab="user-manage">사용자 관리</button>
+        </div>
+
+        <div class="tab-content">
+            <div id="data-manage" class="tab-pane active">
+                <div class="card">
+                    <div class="card-header">파일 업로드</div>
+                    <form id="uploadForm">
+                        <div class="form-group">
+                            <label for="fileInput" id="fileInputLabel">파일을 선택하거나 드래그 앤 드롭하세요</label>
+                            <input type="file" id="fileInput" accept=".xlsx, .xls">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-block" onclick="window.processFile()">파일 로드</button>
+                    </form>
+                </div>
+                
+                <div class="card" id="firebaseDataSection">
+                    <div class="card-header">Firebase 연동</div>
+                    <p class="alert alert-info" id="firebaseDataStatus">Firebase에서 데이터를 불러오세요.</p>
+                    <button type="button" class="btn btn-primary btn-block" onclick="safeCallFunction('loadFirebaseDataDirectly')">Firebase에서 당원 데이터 불러오기</button>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" onclick="safeCallFunction('syncMemberDataToFirebase')">현재 데이터를 Firebase에 동기화</button>
+                </div>
+
+                <div class="card" id="columnSettingsCard">
+                    <div class="card-header">열 설정</div>
+                    <p class="alert alert-info" id="columnSettingsStatus">데이터를 바탕으로 열 설정을 완료하세요.</p>
+                    <div id="columnSettings" class="row">
+                        <div class="col-md-6 form-group">
+                            <label for="nameCol">이름 열</label>
+                            <select id="nameCol" class="form-control" disabled></select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="dobCol">생년월일 열</label>
+                            <select id="dobCol" class="form-control" disabled></select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="phoneCol">전화번호 열</label>
+                            <select id="phoneCol" class="form-control" disabled></select>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label for="dongCol">읍/면/동 열</label>
+                            <select id="dongCol" class="form-control" disabled></select>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-info btn-block" onclick="window.updateColumnSettings()">설정 적용</button>
+                </div>
+            </div>
+
+            <div id="all-members" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">전체 당원 목록</div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr id="tableHeader"></tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr><td colspan="4" style="text-align: center;">데이터가 없습니다. 파일을 업로드하거나 Firebase에서 불러오세요.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="statistics" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">통계</div>
+                    <p class="alert alert-info" id="statisticsStatus">통계를 보려면 먼저 데이터를 불러오세요.</p>
+                    <div class="chart-container">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dongChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="member-search" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">당원 검색</div>
+                    <div class="form-group">
+                        <label for="searchQuery">검색어 (이름, 전화번호)</label>
+                        <input type="text" id="searchQuery" class="form-control" placeholder="이름 또는 전화번호를 입력하세요">
+                    </div>
+                    <div class="form-group">
+                        <label for="searchDong">읍/면/동 선택</label>
+                        <select id="searchDong" class="form-control">
+                            <option value="">읍/면/동 전체</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-block" onclick="window.searchMembers()">검색</button>
+                    <p id="searchStatus" class="alert alert-info mt-3">검색어를 입력하거나 읍/면/동을 선택하세요.</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">검색 결과</div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr id="searchTableHeader"></tr>
+                            </thead>
+                            <tbody id="searchTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="birthday-search" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">생일 검색</div>
+                    <div class="form-group">
+                        <label for="searchMonth">월 선택</label>
+                        <select id="searchMonth" class="form-control">
+                            <option value="">-- 월 선택 --</option>
+                            <option value="1">1월</option>
+                            <option value="2">2월</option>
+                            <option value="3">3월</option>
+                            <option value="4">4월</option>
+                            <option value="5">5월</option>
+                            <option value="6">6월</option>
+                            <option value="7">7월</option>
+                            <option value="8">8월</option>
+                            <option value="9">9월</option>
+                            <option value="10">10월</option>
+                            <option value="11">11월</option>
+                            <option value="12">12월</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-block" onclick="window.searchBirthdays()">검색</button>
+                    <p id="birthdayStatus" class="alert alert-info mt-3">원하는 월을 선택하고 검색하세요.</p>
+                </div>
+                <div class="card mt-4">
+                    <div class="card-header">생일 당원 목록</div>
+                    <ul id="birthdayList" class="list-unstyled"></ul>
+                </div>
+            </div>
+            
+            <div id="user-manage" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">사용자 목록</div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>사용자 ID</th>
+                                    <th>비밀번호</th>
+                                    <th>권한</th>
+                                    <th>삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userList"></tbody>
+                        </table>
+                    </div>
+                    <div class="btn-group mt-3">
+                        <button class="btn btn-primary" onclick="safeCallFunction('syncUsersToFirebase')">Firebase에 사용자 동기화</button>
+                        <button class="btn btn-info" onclick="safeCallFunction('loadUsersFromFirebase')">Firebase에서 사용자 불러오기</button>
+                        <button class="btn btn-secondary" onclick="safeCallFunction('downloadUserCredentials')">사용자 계정 다운로드</button>
+                    </div>
+                    <p id="syncStatus" class="alert alert-info mt-3">Firebase에 사용자 데이터를 동기화하거나 불러오세요.</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">새 사용자 추가</div>
+                    <div class="form-group">
+                        <label for="newUsername">사용자 ID</label>
+                        <input type="text" id="newUsername" class="form-control" placeholder="새 사용자 ID" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">비밀번호</label>
+                        <input type="password" id="newPassword" class="form-control" placeholder="비밀번호" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPermissions">권한 (쉼표로 구분)</label>
+                        <input type="text" id="newPermissions" class="form-control" value="user" placeholder="예: user, admin">
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="window.addUser()">사용자 추가</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
