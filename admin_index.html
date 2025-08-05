@@ -379,6 +379,48 @@ function defineFirebaseFunctions() {
             });
         });
     };
+// 열 설정 저장 
+    window.saveColumnSettingsToFirebase = function() {
+    return new Promise((resolve, reject) => {
+        if (!isFirebaseReady || !db) {
+            reject(new Error('Firebase 연결이 필요합니다.'));
+            return;
+        }
+
+        console.log('🔄 열 설정만 Firebase에 저장하는 중...');
+        const statusEl = document.getElementById('syncStatus');
+        if (statusEl) {
+            statusEl.innerHTML = '⚙️ 열 설정을 Firebase에 저장 중...';
+        }
+
+        const columnSettings = window.columnSettings;
+        if (!columnSettings) {
+            reject(new Error('저장할 열 설정 정보가 없습니다.'));
+            return;
+        }
+        
+        // metadata 문서만 업데이트합니다.
+        const metaDocRef = doc(db, 'memberData', 'metadata');
+        updateDoc(metaDocRef, {
+            columnSettings: columnSettings,
+            lastColumnSettingsSync: new Date().toISOString()
+        }).then(() => {
+            console.log('✅ 열 설정 저장 성공');
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 열 설정이 성공적으로 저장되었습니다.`;
+            }
+            alert('✅ 열 설정이 성공적으로 저장되었습니다.');
+            resolve(true);
+        }).catch(error => {
+            console.error('❌ 열 설정 저장 에러:', error);
+            if (statusEl) {
+                statusEl.innerHTML = `❌ 열 설정 저장 실패: ${error.message}`;
+            }
+            alert(`❌ 열 설정 저장 실패\n\n${error.message}`);
+            reject(error);
+        });
+    });
+};
     
     // 사용자 정보 Firebase 동기화
     window.syncUsersToFirebase = function() {
@@ -613,8 +655,7 @@ function defineFirebaseFunctions() {
         });
     };
     
-} // <--- 이 부분이 누락되었을 가능성이 높습니다.
-
+}
 // 아래는 defineFirebaseFunctions() 함수 바깥에 위치해야 합니다.
 // 청크 기반 데이터 로드
 async function loadChunkedData(metaData, statusEl) {
@@ -1563,7 +1604,7 @@ if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
                         </div>
                         
                         <div style="text-align: center; margin-top: 20px;">
-                            <button onclick="saveColumnSettings()" class="btn btn-success">💾 열 설정 저장</button>
+                            <button onclick="safeCallFunction('saveColumnSettingsToFirebase')" class="btn btn-success">💾 열 설정 저장</button>
                         </div>
                     </div>
                 </div>
