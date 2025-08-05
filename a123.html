@@ -1133,6 +1133,9 @@ window.login = function() {
         
         // 로그인 성공 시 UI 업데이트
         window.updatePermissionsUI();
+        // 로그인 성공 후 데이터 로드 및 시스템 업데이트
+        window.loadDataFromStorage();
+        window.updateSystemAfterDataLoad();
     } else {
         loginMessage.textContent = '잘못된 사용자 ID 또는 비밀번호입니다.';
     }
@@ -1211,6 +1214,16 @@ window.loadUsersFromStorage = function() {
     const savedUsers = localStorage.getItem('appUsers');
     if (savedUsers) {
         window.users = JSON.parse(savedUsers);
+    } else {
+        // 로컬 저장소에 사용자 정보가 없으면 기본 관리자 계정을 생성합니다.
+        console.log('⚠️ 로컬 저장소에 사용자 정보가 없어 기본 관리자 계정을 생성합니다.');
+        window.users = {
+            'admin': {
+                password: '1234',
+                permissions: ['admin', 'user']
+            }
+        };
+        window.saveUsersToStorage(); // 생성된 기본 계정을 로컬에 저장
     }
 };
 
@@ -1366,8 +1379,7 @@ console.log('🚀 Firebase 초기화 시작...');
 startFirebaseConnection();
 
 window.onload = function() {
-    window.loadUsersFromStorage();
-    window.loadDataFromStorage(); // 로컬 저장소에서 데이터 불러오기
+    window.loadUsersFromStorage(); // 로컬 저장소에서 사용자 정보 불러오기 또는 기본 계정 생성
     
     const lastLoginUser = localStorage.getItem('lastLoginUser');
     if (lastLoginUser && window.users[lastLoginUser]) {
