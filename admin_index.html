@@ -32,66 +32,61 @@
         const maxRetries = 3;
         
         // 안전한 함수 호출 헬퍼
-        function safeCallFunction(functionName, ...args) {
-            try {
-                console.log(`🔧 ${functionName} 함수 호출 시작`);
-                
-                const func = window[functionName];
-                if (typeof func !== 'function') {
-                    console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
-                    alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
-                    return null;
-                }
-                
-                const firebaseFunctions = [
-                    'loadMemberDataFromFirebase',
-                    'loadMemberDataFromFirebaseInTab', 
-                    'loadFirebaseDataDirectly',
-                    'syncMemberDataToFirebase',
-                    'syncUsersToFirebase',
-                    'loadUsersFromFirebase'
-                ];
-                
-                if (firebaseFunctions.includes(functionName)) {
-                    if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
-                        console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
-                        alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
-                        return null;
-                    }
-                }
-                
-                let result;
-                try {
-                    result = func(...args);
-                } catch (execError) {
-                    console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
-                    alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
-                    return null;
-                }
-                
-                if (result && typeof result.then === 'function') {
-                    console.log(`⚡ ${functionName}가 Promise를 반환했습니다`);
-                    result.then((success) => {
-                        console.log(`✅ ${functionName} Promise 성공 완료:`, success);
-                    }).catch((error) => {
-                        console.error(`❌ ${functionName} Promise 실행 중 오류:`, error);
-                        alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${error.message}`);
-                    });
-                } else {
-                    console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
-                }
-                
-                return result;
-                
-            } catch (error) {
-                console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
-                alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+async function safeCallFunction(functionName, ...args) {
+    try {
+        console.log(`🔧 ${functionName} 함수 호출 시작`);
+
+        const func = window[functionName];
+        if (typeof func !== 'function') {
+            console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
+            alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
+            return null;
+        }
+
+        // 필요 시 Firebase 초기화 검사 유지
+        const firebaseFunctions = [
+            'loadMemberDataFromFirebase',
+            'loadMemberDataFromFirebaseInTab', 
+            'loadFirebaseDataDirectly',
+            'syncMemberDataToFirebase',
+            'syncUsersToFirebase',
+            'loadUsersFromFirebase'
+        ];
+
+        if (firebaseFunctions.includes(functionName)) {
+            if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
+                console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
+                alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
                 return null;
             }
         }
 
-        window.safeCallFunction = safeCallFunction;
-        
+        let result;
+        try {
+            result = func(...args);
+            if (result && typeof result.then === 'function') {
+                console.log(`⚡ ${functionName}가 Promise를 반환했습니다, await 처리 중...`);
+                result = await result;  // 비동기 완료까지 대기
+                console.log(`✅ ${functionName} Promise 성공 완료:`, result);
+            } else {
+                console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
+            }
+        } catch (execError) {
+            console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
+            alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
+            return null;
+        }
+
+        return result;
+
+    } catch (error) {
+        console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
+        alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+        return null;
+    }
+}
+window.safeCallFunction = safeCallFunction;
+
         // Firebase 데이터 섹션 숨기기
         function hideFirebaseDataSection() {
             const section = document.getElementById('firebaseDataSection');
