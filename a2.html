@@ -276,13 +276,13 @@
                     
                     const statusEl = document.getElementById('syncStatus');
                     if (statusEl) {
-                        statusEl.innerHTML = '📥 Firebase에서 사용자 정보를 불러오는 중...';
+                        statusEl.innerHTML = '📥 사용자 정보를 불러오는 중...';
                     }
                     
                     getDoc(doc(db, 'system', 'users')).then((docSnapshot) => {
                         if (docSnapshot.exists()) {
                             const data = docSnapshot.data();
-                            console.log('Firebase에서 받은 사용자 데이터:', data);
+                            console.log('사용자 데이터:', data);
                             
                             if (data.users) {
                                 const oldUserCount = Object.keys(window.users).length;
@@ -294,41 +294,41 @@
                                 }
                                 
                                 if (statusEl) {
-                                    statusEl.innerHTML = `✅ Firebase에서 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
+                                    statusEl.innerHTML = `✅ 사용자 정보를 불러왔습니다. (${newUserCount}명)`;
                                 }
                                 
-                                console.log('✅ Firebase에서 사용자 정보를 불러왔습니다.');
+                                console.log('✅ 사용자 정보를 불러왔습니다.');
                                 console.log(`사용자 수: ${oldUserCount} → ${newUserCount}`);
                                 
                                 if (window.displayUserList) {
                                     window.displayUserList();
                                 }
                                 
-                                alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
+                                alert(`✅ 데이터 베이스에 접속됐습니다!\n\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
                                 
                                 resolve(true);
                             } else {
-                                console.log('❌ Firebase에 사용자 데이터가 없음');
+                                console.log('❌ 사용자 데이터가 없음');
                                 if (statusEl) {
-                                    statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
+                                    statusEl.innerHTML = '📭 저장된 사용자 데이터가 없습니다.';
                                 }
-                                alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
+                                alert('📭 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
                                 resolve(false);
                             }
                         } else {
-                            console.log('❌ Firebase 사용자 문서가 존재하지 않음');
+                            console.log('❌ 사용자 문서가 존재하지 않음');
                             if (statusEl) {
-                                statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
+                                statusEl.innerHTML = '📭 사용자 문서가 없습니다.';
                             }
                             alert('📭 Firebase에 사용자 문서가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
                             resolve(false);
                         }
                     }).catch(error => {
-                        console.error('❌ Firebase 사용자 로드 에러:', error);
+                        console.error('❌ 사용자 로드 에러:', error);
                         if (statusEl) {
                             statusEl.innerHTML = `❌ 로드 실패: ${error.message}`;
                         }
-                        alert(`❌ Firebase에서 사용자 정보 로드 실패\n\n${error.message}`);
+                        alert(`❌ 사용자 정보 로드 실패\n\n${error.message}`);
                         resolve(false);
                     });
                 });
@@ -344,7 +344,7 @@
                     
                     const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
                     if (statusEl) {
-                        statusEl.innerHTML = '📥 Firebase에서 당원 데이터를 불러오는 중...';
+                        statusEl.innerHTML = '📥 당원 데이터를 불러오는 중...';
                     }
                     
                     // 먼저 메타데이터 읽기
@@ -390,7 +390,7 @@
                     
                     const statusEl = document.getElementById('syncStatus');
                     if (statusEl) {
-                        statusEl.innerHTML = '👥 사용자 데이터를 Firebase에 동기화하는 중...';
+                        statusEl.innerHTML = '👥 사용자 데이터를 동기화하는 중...';
                     }
                     
                     const syncData = {
@@ -403,13 +403,13 @@
                     console.log('동기화할 데이터:', syncData);
                     
                     setDoc(doc(db, 'system', 'users'), syncData).then(() => {
-                        console.log('✅ Firebase 사용자 동기화 성공');
+                        console.log('✅ 사용자 동기화 성공');
                         if (statusEl) {
                             statusEl.innerHTML = `✅ 사용자 데이터가 성공적으로 동기화되었습니다. (${Object.keys(window.users).length}명)`;
                         }
                         
                         setTimeout(() => {
-                            alert(`✅ 사용자 정보가 Firebase에 동기화되었습니다!\n\n👥 총 ${Object.keys(window.users).length}명의 사용자\n📅 동기화 시간: ${new Date().toLocaleString('ko-KR')}\n\n이제 다른 사용자들이 시스템에 접근할 수 있습니다.`);
+                            alert(`✅ 사용자 정보가 동기화되었습니다!\n\n👥 총 ${Object.keys(window.users).length}명의 사용자\n📅 동기화 시간: ${new Date().toLocaleString('ko-KR')}\n\n이제 다른 사용자들이 시스템에 접근할 수 있습니다.`);
                         }, 100);
                         
                         resolve(true);
@@ -449,7 +449,7 @@
                     
                     const statusEl = document.getElementById('syncStatus');
                     if (statusEl) {
-                        statusEl.innerHTML = '📊 당원 데이터를 Firebase에 동기화하는 중...';
+                        statusEl.innerHTML = '📊 당원 데이터를 동기화하는 중...';
                     }
                     
                     try {
