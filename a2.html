@@ -2079,8 +2079,7 @@ function loadUserData() {
             }
         }
 
-        // 로그인 함수
-        
+// 로그인 함수
 async function login() {
     const id = document.getElementById('username').value.trim();
     const pw = document.getElementById('password').value.trim();
@@ -2099,7 +2098,9 @@ async function login() {
             window.currentUser = id;
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('currentUser').textContent = `👤 ${id}`;
+            const currentUserEl = document.getElementById('currentUser');
+            currentUserEl.style.display = 'block';
+            currentUserEl.textContent = `👤 ${id}님 환영합니다!`;
             alert(`환영합니다, ${id}님!`);
         } else {
             alert("로그인 실패. 아이디 또는 비밀번호가 틀렸습니다.");
@@ -2109,345 +2110,344 @@ async function login() {
         alert("로그인 중 오류가 발생했습니다.");
     }
 }
-);
-            console.log('현재 users 객체:', users);
+console.log('현재 users 객체:', users);
 
-            if (!username || !password) {
-                alert('사용자 ID와 비밀번호를 모두 입력하세요.');
-                return;
-            }
+if (!username || !password) {
+    alert('사용자 ID와 비밀번호를 모두 입력하세요.');
+    return;
+}
 
-            if (!users || !users.admin) {
-                console.log('users 객체가 없거나 admin 계정이 없음. 초기화 진행');
-                users = {
-                    'admin': { 
-                        password: 'admin', 
-                        permissions: [
-                            '1. 파일/열 설정',
-                            '2. 생일 검색', 
-                            '3. 당원 검색',
-                            '4. 데이터 관리',
-                            '5. 통계/설정',
-                            '6. 사용자 관리'
-                        ]
-                    }
-                };
-                saveUsersToStorage();
-                console.log('users 객체 강제 초기화 완료');
-            }
-
-            if (users[username] && users[username].password === password) {
-                currentUser = username;
-                
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'block';
-                document.getElementById('currentUser').style.display = 'block';
-                document.getElementById('currentUser').textContent = `${username}님 환영합니다!`;
-                
-                const logoutBtn = document.getElementById('logoutBtn');
-                logoutBtn.style.display = 'block';
-                
-                applyPermissions();
-                
-                console.log(`✅ ${username}님이 로그인했습니다.`);
-            } else {
-                console.log('로그인 실패. 사용자 정보:', users[username]);
-                
-                if (username === 'admin') {
-                    const resetConfirm = confirm(
-                        '❌ 로그인 실패\n\n' +
-                        'admin 계정 로그인에 실패했습니다.\n\n' +
-                        '원인:\n' +
-                        '• 비밀번호가 변경되었거나\n' +
-                        '• 저장된 데이터에 문제가 있을 수 있습니다\n\n' +
-                        '✅ 확인: admin 계정을 기본값(admin/admin)으로 초기화\n' +
-                        '❌ 취소: 다시 시도'
-                    );
-                    
-                    if (resetConfirm) {
-                        resetAdminAccount();
-                        return;
-                    }
-                }
-                
-                alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.\n\n💡 최초 사용 시: admin / admin');
-            }
+if (!users || !users.admin) {
+    console.log('users 객체가 없거나 admin 계정이 없음. 초기화 진행');
+    users = {
+        'admin': { 
+            password: 'admin', 
+            permissions: [
+                '1. 파일/열 설정',
+                '2. 생일 검색', 
+                '3. 당원 검색',
+                '4. 데이터 관리',
+                '5. 통계/설정',
+                '6. 사용자 관리'
+            ]
         }
+    };
+    saveUsersToStorage();
+    console.log('users 객체 강제 초기화 완료');
+}
 
-        // 로그아웃 함수
-        function logout() {
-            if (confirm('로그아웃 하시겠습니까?')) {
-                currentUser = '';
-                document.getElementById('loginScreen').style.display = 'block';
-                document.getElementById('mainApp').style.display = 'none';
-                document.getElementById('username').value = '';
-                document.getElementById('password').value = '';
-                document.getElementById('currentUser').style.display = 'none';
-                document.getElementById('logoutBtn').style.display = 'none';
-            }
+if (users[username] && users[username].password === password) {
+    currentUser = username;
+    
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('currentUser').style.display = 'block';
+    document.getElementById('currentUser').textContent = `${username}님 환영합니다!`;
+    
+    const logoutBtn = document.getElementById('logoutBtn');
+    logoutBtn.style.display = 'block';
+    
+    applyPermissions();
+    
+    console.log(`✅ ${username}님이 로그인했습니다.`);
+} else {
+    console.log('로그인 실패. 사용자 정보:', users[username]);
+    
+    if (username === 'admin') {
+        const resetConfirm = confirm(
+            '❌ 로그인 실패\n\n' +
+            'admin 계정 로그인에 실패했습니다.\n\n' +
+            '원인:\n' +
+            '• 비밀번호가 변경되었거나\n' +
+            '• 저장된 데이터에 문제가 있을 수 있습니다\n\n' +
+            '✅ 확인: admin 계정을 기본값(admin/admin)으로 초기화\n' +
+            '❌ 취소: 다시 시도'
+        );
+        
+        if (resetConfirm) {
+            resetAdminAccount();
+            return;
         }
+    }
+    
+    alert('❌ 로그인 실패\n\n사용자 ID 또는 비밀번호가 올바르지 않습니다.\n\n💡 최초 사용 시: admin / admin');
+}
 
-        // 권한 적용
-        function applyPermissions() {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const currentUserData = users[currentUser];
-            
-            if (!currentUserData) return;
-            
-            tabs.forEach(tab => {
-                const tabText = tab.textContent;
-                
-                if (currentUser === 'admin') {
-                    tab.style.display = 'block';
-                    tab.disabled = false;
-                    return;
-                }
-                
-                if (tabText === '6. 사용자 관리' && currentUser !== 'admin') {
-                    tab.style.display = 'none';
-                    return;
-                }
-                
-                if (currentUserData.permissions.includes(tabText)) {
-                    tab.style.display = 'block';
-                    tab.disabled = false;
-                } else {
-                    tab.style.display = 'none';
-                }
-            });
-            
-            const availableTabs = Array.from(tabs).filter(tab => 
-                tab.style.display !== 'none' && !tab.disabled
-            );
-            if (availableTabs.length > 0) {
-                availableTabs[0].click();
-            }
+// 로그아웃 함수
+function logout() {
+    if (confirm('로그아웃 하시겠습니까?')) {
+        currentUser = '';
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('currentUser').style.display = 'none';
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) logoutBtn.style.display = 'none';
+    }
+}
+
+// 권한 적용
+function applyPermissions() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const currentUserData = users[currentUser];
+    
+    if (!currentUserData) return;
+    
+    tabs.forEach(tab => {
+        const tabText = tab.textContent;
+        
+        if (currentUser === 'admin') {
+            tab.style.display = 'block';
+            tab.disabled = false;
+            return;
         }
-
-        // 탭 전환
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'userManage' && currentUser === 'admin') {
-                displayUserList();
-                setTimeout(() => {
-                    updateOfflineModeUI();
-                }, 100);
-            } else if (tabName === 'statistics') {
-                refreshStats();
-            } else if (tabName === 'dataManage') {
-                displayAllMembers();
-            }
+        
+        if (tabText === '6. 사용자 관리' && currentUser !== 'admin') {
+            tab.style.display = 'none';
+            return;
         }
+        
+        if (currentUserData.permissions.includes(tabText)) {
+            tab.style.display = 'block';
+            tab.disabled = false;
+        } else {
+            tab.style.display = 'none';
+        }
+    });
+    
+    const availableTabs = Array.from(tabs).filter(tab => 
+        tab.style.display !== 'none' && !tab.disabled
+    );
+    if (availableTabs.length > 0) {
+        availableTabs[0].click();
+    }
+}
 
-        // 파일 업로드 처리
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+// 탭 전환
+function showTab(tabName) {
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
+    
+    if (tabName === 'userManage' && currentUser === 'admin') {
+        displayUserList();
+        setTimeout(() => {
+            updateOfflineModeUI();
+        }, 100);
+    } else if (tabName === 'statistics') {
+        refreshStats();
+    } else if (tabName === 'dataManage') {
+        displayAllMembers();
+    }
+}
 
-            console.log('파일 업로드 시작:', file.name);
-            document.getElementById('selectedFile').textContent = `선택된 파일: ${file.name}`;
+// 파일 업로드 처리
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    let data;
-                    
-                    if (file.name.endsWith('.csv')) {
-                        // CSV 파일 처리
-                        const csvText = e.target.result;
-                        const rows = csvText.split('\n').map(row => row.split(','));
-                        data = rows.filter(row => row.some(cell => cell.trim() !== ''));
-                    } else {
-                        // 엑셀 파일 처리
-                        const workbook = XLSX.read(e.target.result, { type: 'binary' });
-                        const sheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        excelWorkbook = workbook;
-                    }
+    console.log('파일 업로드 시작:', file.name);
+    document.getElementById('selectedFile').textContent = `선택된 파일: ${file.name}`;
 
-                    if (!data || data.length === 0) {
-                        alert('파일에 데이터가 없습니다.');
-                        return;
-                    }
-
-                    currentData = data;
-                    console.log('데이터 로드 완료:', data.length, '행');
-
-                    // 헤더 정보 표시
-                    if (data.length > 0) {
-                        displayHeaderInfo(data[0]);
-                        updateCurrentFileInfo(file.name, data.length);
-                    }
-
-                    // 데이터 저장
-                    saveDataToStorage();
-
-                    // 전체 시스템 상태 업데이트
-                    updateSystemAfterDataLoad();
-
-                    alert(`✅ 파일이 성공적으로 업로드되었습니다!\n\n📊 ${data.length}행의 데이터\n📋 이제 열 번호를 설정하세요.`);
-
-                } catch (error) {
-                    console.error('파일 읽기 오류:', error);
-                    alert('파일을 읽는 중 오류가 발생했습니다.\n지원되는 형식: .xlsx, .xls, .csv');
-                }
-            };
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data;
             
             if (file.name.endsWith('.csv')) {
-                reader.readAsText(file, 'UTF-8');
+                // CSV 파일 처리
+                const csvText = e.target.result;
+                const rows = csvText.split('\n').map(row => row.split(','));
+                data = rows.filter(row => row.some(cell => cell.trim() !== ''));
             } else {
-                reader.readAsBinaryString(file);
+                // 엑셀 파일 처리
+                const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                excelWorkbook = workbook;
             }
-        }
 
-        // 데이터 로드 후 전체 시스템 상태 업데이트
-        function updateSystemAfterDataLoad() {
-            console.log('시스템 상태 업데이트 시작...');
-            
-            // 현재 활성 탭이 있다면 해당 탭의 콘텐츠도 업데이트
-            const activeTab = document.querySelector('.tab-pane.active');
-            if (activeTab) {
-                const tabId = activeTab.id;
-                console.log('현재 활성 탭:', tabId);
-                
-                // 각 탭에 맞는 업데이트 수행
-                setTimeout(() => {
-                    switch(tabId) {
-                        case 'dataManage':
-                            displayAllMembers();
-                            break;
-                        case 'statistics':
-                            refreshStats();
-                            break;
-                        case 'userManage':
-                            if (currentUser === 'admin') {
-                                displayUserList();
-                            }
-                            break;
-                    }
-                }, 100);
-            }
-            
-            // Firebase 데이터 섹션 숨기기 (새 파일을 업로드했으므로)
-            const firebaseDataSection = document.getElementById('firebaseDataSection');
-            if (firebaseDataSection) {
-                firebaseDataSection.style.display = 'none';
-            }
-            
-            console.log('시스템 상태 업데이트 완료');
-        }
-
-        // 헤더 정보 표시
-        function displayHeaderInfo(headers) {
-            const headerInfo = document.getElementById('headerInfo');
-            if (!headerInfo || !headers) return;
-            
-            let html = '<strong>📋 파일 헤더 정보:</strong><br>';
-            headers.forEach((header, index) => {
-                html += `${index + 1}열: ${header} /`;
-            });
-            headerInfo.innerHTML = html;
-        }
-
-        // 현재 파일 정보 업데이트
-        function updateCurrentFileInfo(fileName, rowCount) {
-            const currentFileInfo = document.getElementById('currentFileInfo');
-            if (currentFileInfo) {
-                currentFileInfo.innerHTML = `현재 작업 파일: <strong>${fileName}</strong> (${rowCount}행)`;
-            }
-        }
-
-        // 열 설정 저장
-        function saveColumnSettings() {
-            const nameCol = parseInt(document.getElementById('nameCol').value);
-            const dobCol = parseInt(document.getElementById('dobCol').value);
-            const phoneCol = parseInt(document.getElementById('phoneCol').value) || 0;
-            const dongCol = parseInt(document.getElementById('dongCol').value) || 0;
-            
-            if (!nameCol || !dobCol) {
-                alert('이름과 생년월일 열 번호는 필수입니다.');
+            if (!data || data.length === 0) {
+                alert('파일에 데이터가 없습니다.');
                 return;
             }
-            
-            if (!currentData || currentData.length === 0) {
-                alert('먼저 파일을 업로드해주세요.');
-                return;
+
+            currentData = data;
+            console.log('데이터 로드 완료:', data.length, '행');
+
+            // 헤더 정보 표시
+            if (data.length > 0) {
+                displayHeaderInfo(data[0]);
+                updateCurrentFileInfo(file.name, data.length);
             }
-            
-            const maxCol = currentData[0] ? currentData[0].length : 0;
-            if (nameCol > maxCol || dobCol > maxCol || (phoneCol > 0 && phoneCol > maxCol) || (dongCol > 0 && dongCol > maxCol)) {
-                alert(`열 번호는 1부터 ${maxCol}까지 입력할 수 있습니다.`);
-                return;
-            }
-            
-            columnSettings = {
-                name: nameCol,
-                dob: dobCol,
-                phone: phoneCol,
-                dong: dongCol
-            };
-            
+
+            // 데이터 저장
             saveDataToStorage();
-            
-            // 전체 시스템 업데이트
+
+            // 전체 시스템 상태 업데이트
             updateSystemAfterDataLoad();
-            displayAllMembers();
-            
-            alert('열 설정이 저장되었습니다!\n이제 다른 탭에서 검색 기능을 사용할 수 있습니다.');
+
+            alert(`✅ 파일이 성공적으로 업로드되었습니다!\n\n📊 ${data.length}행의 데이터\n📋 이제 열 번호를 설정하세요.`);
+
+        } catch (error) {
+            console.error('파일 읽기 오류:', error);
+            alert('파일을 읽는 중 오류가 발생했습니다.\n지원되는 형식: .xlsx, .xls, .csv');
         }
+    };
+    
+    if (file.name.endsWith('.csv')) {
+        reader.readAsText(file, 'UTF-8');
+    } else {
+        reader.readAsBinaryString(file);
+    }
+}
+
+// 데이터 로드 후 전체 시스템 상태 업데이트
+function updateSystemAfterDataLoad() {
+    console.log('시스템 상태 업데이트 시작...');
+    
+    // 현재 활성 탭이 있다면 해당 탭의 콘텐츠도 업데이트
+    const activeTab = document.querySelector('.tab-pane.active');
+    if (activeTab) {
+        const tabId = activeTab.id;
+        console.log('현재 활성 탭:', tabId);
+        
+        // 각 탭에 맞는 업데이트 수행
+        setTimeout(() => {
+            switch(tabId) {
+                case 'dataManage':
+                    displayAllMembers();
+                    break;
+                case 'statistics':
+                    refreshStats();
+                    break;
+                case 'userManage':
+                    if (currentUser === 'admin') {
+                        displayUserList();
+                    }
+                    break;
+            }
+        }, 100);
+    }
+    
+    // Firebase 데이터 섹션 숨기기 (새 파일을 업로드했으므로)
+    const firebaseDataSection = document.getElementById('firebaseDataSection');
+    if (firebaseDataSection) {
+        firebaseDataSection.style.display = 'none';
+    }
+    
+    console.log('시스템 상태 업데이트 완료');
+}
+
+// 헤더 정보 표시
+function displayHeaderInfo(headers) {
+    const headerInfo = document.getElementById('headerInfo');
+    if (!headerInfo || !headers) return;
+    
+    let html = '<strong>📋 파일 헤더 정보:</strong><br>';
+    headers.forEach((header, index) => {
+        html += `${index + 1}열: ${header} /`;
+    });
+    headerInfo.innerHTML = html;
+}
+
+// 현재 파일 정보 업데이트
+function updateCurrentFileInfo(fileName, rowCount) {
+    const currentFileInfo = document.getElementById('currentFileInfo');
+    if (currentFileInfo) {
+        currentFileInfo.innerHTML = `현재 작업 파일: <strong>${fileName}</strong> (${rowCount}행)`;
+    }
+}
+
+// 열 설정 저장
+function saveColumnSettings() {
+    const nameCol = parseInt(document.getElementById('nameCol').value);
+    const dobCol = parseInt(document.getElementById('dobCol').value);
+    const phoneCol = parseInt(document.getElementById('phoneCol').value) || 0;
+    const dongCol = parseInt(document.getElementById('dongCol').value) || 0;
+    
+    if (!nameCol || !dobCol) {
+        alert('이름과 생년월일 열 번호는 필수입니다.');
+        return;
+    }
+    
+    if (!currentData || currentData.length === 0) {
+        alert('먼저 파일을 업로드해주세요.');
+        return;
+    }
+    
+    const maxCol = currentData[0] ? currentData[0].length : 0;
+    if (nameCol > maxCol || dobCol > maxCol || (phoneCol > 0 && phoneCol > maxCol) || (dongCol > 0 && dongCol > maxCol)) {
+        alert(`열 번호는 1부터 ${maxCol}까지 입력할 수 있습니다.`);
+        return;
+    }
+    
+    columnSettings = {
+        name: nameCol,
+        dob: dobCol,
+        phone: phoneCol,
+        dong: dongCol
+    };
+    
+    saveDataToStorage();
+    
+    // 전체 시스템 업데이트
+    updateSystemAfterDataLoad();
+    displayAllMembers();
+    
+    alert('열 설정이 저장되었습니다!\n이제 다른 탭에서 검색 기능을 사용할 수 있습니다.');
+}
 
         // 데이터 로컬 저장소에 저장
         ));
             }
         }
 
-        // 전체 당원 목록 표시
-        function displayAllMembers() {
-            if (!currentData || currentData.length <= 1) {
-                document.getElementById('allMembersResults').innerHTML = '<div class="no-data">표시할 당원 데이터가 없습니다.</div>';
-                return;
-            }
-            
-            let html = '<div class="results-header">👥 전체 당원 목록</div>';
-            
-            for (let i = 1; i < currentData.length; i++) {
-                const row = currentData[i];
-                if (!row || row.length === 0) continue;
-                
-                const name = row[columnSettings.name - 1] || '';
-                const dob = row[columnSettings.dob - 1] || '';
-                const phone = columnSettings.phone > 0 ? (row[columnSettings.phone - 1] || '') : '';
-                const dong = columnSettings.dong > 0 ? (row[columnSettings.dong - 1] || '') : '';
-                
-                if (!name.toString().trim()) continue;
-                
-                const age = calculateAge(dob);
-                const ageGroup = getAgeGroup(age);
-                
-                html += `
-                    <div class="member-item" onclick="selectMemberForEdit(${i})">
-                        <div class="member-name">${name}</div>
-                        <div class="member-details">
-                            🎂 생년월일: ${formatDate(dob)} (${age}세, ${ageGroup})<br>
-                            ${phone ? `📞 전화번호: ${phone}<br>` : ''}
-                            ${dong ? `🏠 읍면동: ${dong}` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            document.getElementById('allMembersResults').innerHTML = html;
-        }
+// 전체 당원 목록 표시
+function displayAllMembers() {
+    if (!currentData || currentData.length <= 1) {
+        document.getElementById('allMembersResults').innerHTML = '<div class="no-data">표시할 당원 데이터가 없습니다.</div>';
+        return;
+    }
+    
+    let html = '<div class="results-header">👥 전체 당원 목록</div>';
+    
+    for (let i = 1; i < currentData.length; i++) {
+        const row = currentData[i];
+        if (!row || row.length === 0) continue;
+        
+        const name = row[columnSettings.name - 1] || '';
+        const dob = row[columnSettings.dob - 1] || '';
+        const phone = columnSettings.phone > 0 ? (row[columnSettings.phone - 1] || '') : '';
+        const dong = columnSettings.dong > 0 ? (row[columnSettings.dong - 1] || '') : '';
+        
+        if (!name.toString().trim()) continue;
+        
+        const age = calculateAge(dob);
+        const ageGroup = getAgeGroup(age);
+        
+        html += `
+            <div class="member-item" onclick="selectMemberForEdit(${i})">
+                <div class="member-name">${name}</div>
+                <div class="member-details">
+                    🎂 생년월일: ${formatDate(dob)} (${age}세, ${ageGroup})<br>
+                    ${phone ? `📞 전화번호: ${phone}<br>` : ''}
+                    ${dong ? `🏠 읍면동: ${dong}` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('allMembersResults').innerHTML = html;
+}
 
         // 검색 기능들
         function toggleDateOptions() {
