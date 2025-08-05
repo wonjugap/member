@@ -1977,18 +1977,18 @@ function isBirthday(dob, targetDate = new Date()) {
 }
 
         // Firebase 상태 업데이트
-        function updateFirebaseStatus(connected, message) {
-            const statusEl = document.getElementById('firebaseStatus');
-            const indicator = statusEl.querySelector('.connection-indicator');
-            
-            if (connected) {
-                indicator.className = 'connection-indicator connected';
-                statusEl.innerHTML = `<span class="connection-indicator connected"></span>Firebase: ${message}`;
-else {
-                indicator.className = 'connection-indicator disconnected';
-                statusEl.innerHTML = `<span class="connection-indicator disconnected"></span>Firebase: ${message}`;
-            }
-        }
+function updateFirebaseStatus(connected, message) {
+    const statusEl = document.getElementById('firebaseStatus');
+    const indicator = statusEl.querySelector('.connection-indicator');
+
+    if (connected) {
+        indicator.className = 'connection-indicator connected';
+        statusEl.innerHTML = `<span class="connection-indicator connected"></span>Firebase: ${message}`;
+    } else {
+        indicator.className = 'connection-indicator disconnected';
+        statusEl.innerHTML = `<span class="connection-indicator disconnected"></span>Firebase: ${message}`;
+    }
+}
 
         // Firebase 연결 테스트
         function testFirebaseConnection() {
