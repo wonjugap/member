@@ -1632,12 +1632,36 @@
             });
         });
         
-        function login() {
+function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const loginMessage = document.getElementById('loginMessage');
+            
+            // 로그인 시도 전에 Firebase에서 사용자 데이터를 다시 로드
+            if (window.loadUsersFromFirebase && window.firebaseInitialized) {
+                loginMessage.textContent = '사용자 정보 동기화 중...';
+                loginMessage.style.display = 'block';
+                
+                window.loadUsersFromFirebase().then(() => {
+                    performLogin(username, password);
+                }).catch(error => {
+                    console.error('로그인 전 사용자 데이터 동기화 실패:', error);
+                    loginMessage.textContent = `동기화 실패: ${error.message}`;
+                    // 동기화에 실패해도 로컬 데이터로 로그인 시도
+                    performLogin(username, password);
+                });
+            } else {
+                // Firebase 기능이 없는 경우 바로 로그인 시도
+                performLogin(username, password);
+            }
+        }
 
-            if (users[username] && users[username].password === password) {
-                currentUser = users[username];
+        // 실제 로그인 로직을 담고 있는 헬퍼 함수
+        function performLogin(username, password) {
+            const loginMessage = document.getElementById('loginMessage');
+
+            if (window.users[username] && window.users[username].password === password) {
+                currentUser = window.users[username];
                 currentUser.username = username;
                 
                 // 마지막 로그인 상태 저장
