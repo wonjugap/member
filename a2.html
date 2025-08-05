@@ -795,15 +795,15 @@
         }
         
         // 오프라인 모드 활성화
-        
-                
-                if (window.showOfflineNotice) {
-                    window.showOfflineNotice();
-                }
-            }, 100);
-        }
-        
-        
+function activateOfflineMode() {
+    // 필요시 실행 로직 추가
+    setTimeout(() => {        
+         if (window.showOfflineNotice) {
+             window.showOfflineNotice();
+            }
+        }, 100);
+     }
+
 // Firebase 실시간 구독
 function startRealtimeSubscriptions() {
     // 사용자 데이터 구독
