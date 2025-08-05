@@ -808,7 +808,7 @@
         }
         
         
-        // Firebase 실시간 구독
+        // Firebase 실시간 구독 (수정된 부분)
         function startRealtimeSubscriptions(dbInstance) {
             if (!dbInstance) {
                 console.error("❌ startRealtimeSubscriptions: 유효한 db 인스턴스가 제공되지 않았습니다.");
@@ -824,25 +824,11 @@
                 }
             });
 
-            // 당원 메타데이터 구독
+            // 당원 메타데이터 구독 - 변경 감지 시 데이터 재로드
             onSnapshot(doc(dbInstance, 'memberData', 'metadata'), (metaSnap) => {
                 if (metaSnap.exists()) {
-                    const meta = metaSnap.data();
-                    const totalChunks = meta.totalChunks || 0;
-                    let allMembers = [];
-                    for (let i = 0; i < totalChunks; i++) {
-                        onSnapshot(doc(dbInstance, 'memberData', `chunk_${i}`), (chunkSnap) => {
-                            if (chunkSnap.exists()) {
-                                const chunkData = chunkSnap.data().members || [];
-                                allMembers = allMembers.filter(m => m.chunkIndex !== i)
-                                                    .concat(chunkData.map(m => ({...m, chunkIndex: i})));
-                                console.log("📊 당원 데이터 실시간 업데이트:", allMembers.length);
-                                if (window.updateUIWithData) {
-                                    updateUIWithData(allMembers, meta, document.getElementById('syncStatus'), totalChunks);
-                                }
-                            }
-                        });
-                    }
+                    console.log("📊 당원 메타데이터 실시간 업데이트 감지, 데이터 재로드 시작...");
+                    safeCallFunction('loadMemberDataFromFirebaseInTab');
                 }
             });
         }
@@ -944,17 +930,6 @@
 
         .logout-btn:hover {
             background: #c82333;
-        }
-
-        .header h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-            font-size: 2.5em;
-        }
-
-        .header p {
-            color: #7f8c8d;
-            font-size: 1.2em;
         }
 
         .login-screen {
