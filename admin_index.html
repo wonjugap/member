@@ -713,6 +713,10 @@ function updateUI(members, metaData, statusEl, loadedChunks) {
     window.currentData = convertedData;
     window.columnSettings = metaData.columnSettings || window.columnSettings;
 
+    // UI를 파일 업로드 이후 상태로 강제 전환
+if (window.saveDataToStorage) window.saveDataToStorage();
+if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
+
     // UI 엘리먼트 업데이트
     const selectedFileEl = document.getElementById('selectedFile');
     if (selectedFileEl) {
