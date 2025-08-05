@@ -1992,18 +1992,18 @@ function updateFirebaseStatus(connected, message) {
 }
 
         // Firebase 연결 테스트
-        function testFirebaseConnection() {
-            if (window.retryFirebaseConnection) {
-                window.retryFirebaseConnection();
-else {
-                alert('Firebase 재연결 기능을 사용할 수 없습니다.\n\n오프라인 모드로 계속 작업할 수 있습니다.\n로컬에서 모든 기능이 정상 작동합니다.');
-            }
-        }
+function testFirebaseConnection() {
+    if (window.retryFirebaseConnection) {
+        window.retryFirebaseConnection();
+    } else {
+        alert('Firebase 재연결 기능을 사용할 수 없습니다.\n\n오프라인 모드로 계속 작업할 수 있습니다.\n로컬에서 모든 기능이 정상 작동합니다.');
+    }
+}
 
-        // Firebase 설정 안내 숨기기
-        function hideFirebaseNotice() {
-            document.getElementById('firebaseSetupNotice').style.display = 'none';
-        }
+// Firebase 설정 안내 숨기기
+function hideFirebaseNotice() {
+    document.getElementById('firebaseSetupNotice').style.display = 'none';
+}
 
         // 오프라인 모드 UI 업데이트
 function updateOfflineModeUI(isOffline) {
