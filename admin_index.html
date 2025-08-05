@@ -709,7 +709,8 @@ function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
     const convertedData = [headers];
     
     allMembers.forEach(member => {
-        const row = new Array(headers.length).fill('');
+        const row = new Array(headers.length);
+        row.fill('');
         
         if (metaData.columnSettings) {
             row[metaData.columnSettings.name - 1] = member.name || '';
@@ -726,7 +727,7 @@ function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
     });
     
     window.currentData = convertedData; // 전역 변수 window.currentData에 할당
-    window.columnSettings = metaData.columnSettings || window.columnSettings;
+    window.columnSettings = metaData.columnSettings || window.columnSettings; // 전역 변수 window.columnSettings에 할당
     
     const selectedFileEl = document.getElementById('selectedFile');
     if (selectedFileEl) {
@@ -751,7 +752,8 @@ function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
     if (window.displayAllMembers) window.displayAllMembers();
     if (window.saveDataToStorage) window.saveDataToStorage();
     
-    updateSystemAfterDataLoad();
+    // 전체 시스템 상태 업데이트
+    if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
     
     if (statusEl) {
         statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${allMembers.length}명, ${loadedChunks}/${metaData.totalChunks} 청크)`;
@@ -763,7 +765,8 @@ function updateUIWithLegacyData(data, statusEl) {
     const convertedData = [headers];
     
     data.members.forEach(member => {
-        const row = new Array(headers.length).fill('');
+        const row = new Array(headers.length);
+        row.fill('');
         
         if (data.columnSettings) {
             row[data.columnSettings.name - 1] = member.name || '';
@@ -780,7 +783,7 @@ function updateUIWithLegacyData(data, statusEl) {
     });
     
     window.currentData = convertedData; // 전역 변수 window.currentData에 할당
-    window.columnSettings = data.columnSettings || window.columnSettings;
+    window.columnSettings = data.columnSettings || window.columnSettings; // 전역 변수 window.columnSettings에 할당
     
     const selectedFileEl = document.getElementById('selectedFile');
     if (selectedFileEl) {
@@ -805,7 +808,8 @@ function updateUIWithLegacyData(data, statusEl) {
     if (window.displayAllMembers) window.displayAllMembers();
     if (window.saveDataToStorage) window.saveDataToStorage();
     
-    updateSystemAfterDataLoad();
+    // 전체 시스템 상태 업데이트
+    if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
     
     if (statusEl) {
         statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${data.members.length}명, 구 형식)`;
