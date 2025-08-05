@@ -3497,12 +3497,23 @@ window.downloadMemberDataFromFirebase = async function() {
         }
 
         const allMembers = result.allMembers;
-        const headerRow = Object.keys(allMembers[0]);
-        const mergedRows = [headerRow];
-        allMembers.forEach(member => mergedRows.push(Object.values(member)));
-        window.currentData = mergedRows;
 
-        console.log('✅ 다운로드할 데이터 준비 완료:', window.currentData);
+        // 1. 모든 필드 집합 구하기
+        const allFieldsSet = new Set();
+        allMembers.forEach(member => {
+            Object.keys(member).forEach(key => allFieldsSet.add(key));
+        });
+        const allFields = Array.from(allFieldsSet);
+
+        // 2. 헤더 + 각 행 데이터 배열 생성
+        const mergedRows = [allFields];
+        allMembers.forEach(member => {
+            const row = allFields.map(field => member[field] !== undefined ? member[field] : '');
+            mergedRows.push(row);
+        });
+
+        window.currentData = mergedRows;
+        console.log('✅ 다운로드할 데이터:', window.currentData);
 
         const ws = XLSX.utils.aoa_to_sheet(window.currentData);
         const wb = XLSX.utils.book_new();
