@@ -605,7 +605,16 @@
             
             if (allMembers.length > 0) {
                 updateUIWithData(allMembers, metaData, statusEl, loadedChunks);
-                return {
+                
+    // 불러온 데이터로 currentData 채우기
+    if (typeof allMembers !== 'undefined' && Array.isArray(allMembers) && allMembers.length > 0) {
+        const headerRow = Object.keys(allMembers[0]);
+        const mergedRows = [headerRow];
+        allMembers.forEach(member => mergedRows.push(Object.values(member)));
+        window.currentData = mergedRows;
+    }
+    
+return {
                     success: true,
                     count: allMembers.length,
                     chunks: loadedChunks,
@@ -3487,33 +3496,18 @@ window.downloadMemberDataFromFirebase = async function() {
             return;
         }
 
-        console.log('📥 Firebase에서 당원 데이터 다운로드 준비 중...');
+        // 데이터 불러오기
         const result = await window.loadMemberDataFromFirebase();
 
-        if (!result || !result.success) {
-            alert('❌ Firebase에서 데이터를 불러오지 못했습니다.');
-            return;
-        }
-
-        // currentData가 비어 있다면 result에서 직접 생성
-        if (!window.currentData || window.currentData.length === 0) {
-            const headerRow = result.headers || [];
-            const mergedRows = [headerRow];
-
-            if (result.allMembers && Array.isArray(result.allMembers)) {
-                result.allMembers.forEach(member => {
-                    mergedRows.push(Object.values(member));
-                });
-            }
-
-            window.currentData = mergedRows;
-        }
-
+        // 여기서도 currentData 강제 확인
         if (!window.currentData || window.currentData.length === 0) {
             alert('❌ Firebase에서 불러온 데이터가 없습니다.');
+            console.log('currentData:', window.currentData);
+            console.log('load result:', result);
             return;
         }
 
+        // 엑셀 변환 후 다운로드
         const ws = XLSX.utils.aoa_to_sheet(window.currentData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '당원데이터');
@@ -3522,7 +3516,6 @@ window.downloadMemberDataFromFirebase = async function() {
         XLSX.writeFile(wb, fileName);
 
         alert(`✅ '${fileName}' 파일이 다운로드되었습니다.`);
-        console.log(`✅ '${fileName}' 다운로드 완료`);
     } catch (error) {
         console.error('❌ 다운로드 중 오류:', error);
         alert(`❌ 다운로드 중 오류 발생: ${error.message}`);
