@@ -349,7 +349,10 @@ function defineFirebaseFunctions() {
                     const metaData = metaDoc.data();
                     
                     if (metaData.syncVersion === '3.0') {
-                        loadChunkedData(metaData, statusEl).then(resolve).catch(reject);
+                        loadChunkedData(metaData, statusEl).then(resolve).catch(() => {
+                           console.warn('⚠️ 청크 데이터 로드 실패, 구 형식으로 재시도합니다.');
+                           loadLegacyData(statusEl).then(resolve).catch(reject);
+                        });
                     } else {
                         loadLegacyData(statusEl).then(resolve).catch(reject);
                     }
@@ -361,6 +364,7 @@ function defineFirebaseFunctions() {
                 if (statusEl) {
                     statusEl.innerHTML = `❌ 메타데이터 로드 실패: ${error.message}`;
                 }
+                // 메타데이터 로드 실패 시 구 형식으로 시도
                 loadLegacyData(statusEl).then(resolve).catch(reject);
             });
         });
@@ -435,7 +439,7 @@ function defineFirebaseFunctions() {
                 return;
             }
             
-            if (!window.currentData || window.currentData.length === 0) {
+            if (!window.currentData || window.currentData.length <= 1) {
                 reject(new Error('먼저 당원 데이터를 업로드해주세요.'));
                 return;
             }
@@ -599,195 +603,110 @@ function defineFirebaseFunctions() {
         });
     };
     
-    // 청크 기반 데이터 로드
-    async function loadChunkedData(metaData, statusEl) {
-        if (statusEl) {
-            statusEl.innerHTML = `📥 ${metaData.totalChunks}개 청크에서 데이터를 불러오는 중...`;
-        }
-        
-        const chunkPromises = [];
-        for (let i = 0; i < metaData.totalChunks; i++) {
-            const chunkPromise = getDoc(doc(db, 'memberData', `chunk_${i}`));
-            chunkPromises.push(chunkPromise);
-        }
-        
-        const chunkDocs = await Promise.all(chunkPromises);
-        let allMembers = [];
-        let loadedChunks = 0;
-        
-        chunkDocs.forEach((chunkDoc) => {
-            if (chunkDoc.exists()) {
-                const chunkData = chunkDoc.data();
-                if (chunkData.members) {
-                    allMembers = allMembers.concat(chunkData.members);
-                    loadedChunks++;
-                }
-            }
-        });
-        
-        if (allMembers.length > 0) {
-            const convertedData = convertToAOA(allMembers, metaData);
-            window.currentData = convertedData; // 전역 변수 명확하게 할당
-            window.columnSettings = metaData.columnSettings;
-            
-            updateUI(convertedData, metaData, statusEl, loadedChunks);
-            
-            return {
-                success: true,
-                count: allMembers.length,
-                chunks: loadedChunks,
-                totalChunks: metaData.totalChunks,
-                lastSync: metaData.lastSync
-            };
-        } else {
-            if (statusEl) {
-                statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
-            }
-            throw new Error('불러온 데이터가 없습니다.');
-        }
-    }
-    
-    // 구 형식 데이터 로드
-    async function loadLegacyData(statusEl) {
-        const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
-        
-        if (docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            
-            if (data.syncVersion === '2.0' && data.members) {
-                const convertedData = convertToAOA(data.members, data);
-                window.currentData = convertedData; // 전역 변수 명확하게 할당
-                window.columnSettings = data.columnSettings;
+} // <--- 이 부분이 누락되었을 가능성이 높습니다.
 
-                updateUI(convertedData, data, statusEl, 1);
-                
-                return {
-                    success: true,
-                    count: data.members.length,
-                    lastSync: data.lastSync,
-                    format: 'legacy'
-                };
-            } else {
-                if (statusEl) {
-                    statusEl.innerHTML = '⚠️ 호환되지 않는 데이터 형식입니다.';
-                }
-                throw new Error('호환되지 않는 데이터 형식입니다.');
-            }
-        } else {
-            if (statusEl) {
-                statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
-            }
-            throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
-        }
+// 아래는 defineFirebaseFunctions() 함수 바깥에 위치해야 합니다.
+// 청크 기반 데이터 로드
+async function loadChunkedData(metaData, statusEl) {
+    if (statusEl) {
+        statusEl.innerHTML = `📥 ${metaData.totalChunks}개 청크에서 데이터를 불러오는 중...`;
     }
     
-    // 공통 데이터 변환 함수
-    function convertToAOA(members, metaData) {
-        const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
-        const convertedData = [headers];
-        
-        members.forEach(member => {
-            const row = new Array(headers.length).fill('');
-            if (metaData.columnSettings) {
-                row[metaData.columnSettings.name - 1] = member.name || '';
-                row[metaData.columnSettings.dob - 1] = member.dob || '';
-                if (metaData.columnSettings.phone > 0) {
-                    row[metaData.columnSettings.phone - 1] = member.phone || '';
-                }
-                if (metaData.columnSettings.dong > 0) {
-                    row[metaData.columnSettings.dong - 1] = member.dong || '';
-                }
-            }
-            convertedData.push(row);
-        });
-        return convertedData;
+    const chunkPromises = [];
+    for (let i = 0; i < metaData.totalChunks; i++) {
+        const chunkPromise = getDoc(doc(db, 'memberData', `chunk_${i}`));
+        chunkPromises.push(chunkPromise);
     }
     
-// UI 업데이트 함수들 (수정된 코드)
-function updateUIWithData(allMembers, metaData, statusEl, loadedChunks) {
-    const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
-    const convertedData = [headers];
+    const chunkDocs = await Promise.all(chunkPromises);
+    let allMembers = [];
+    let loadedChunks = 0;
     
-    allMembers.forEach(member => {
-        const row = new Array(headers.length);
-        row.fill('');
-        
-        if (metaData.columnSettings) {
-            row[metaData.columnSettings.name - 1] = member.name || '';
-            row[metaData.columnSettings.dob - 1] = member.dob || '';
-            if (metaData.columnSettings.phone > 0) {
-                row[metaData.columnSettings.phone - 1] = member.phone || '';
-            }
-            if (metaData.columnSettings.dong > 0) {
-                row[metaData.columnSettings.dong - 1] = member.dong || '';
+    chunkDocs.forEach((chunkDoc) => {
+        if (chunkDoc.exists()) {
+            const chunkData = chunkDoc.data();
+            if (chunkData.members) {
+                allMembers = allMembers.concat(chunkData.members);
+                loadedChunks++;
             }
         }
-        
-        convertedData.push(row);
     });
     
-    window.currentData = convertedData; // 전역 변수 window.currentData에 할당
-    window.columnSettings = metaData.columnSettings || window.columnSettings; // 전역 변수 window.columnSettings에 할당
-    
-    const selectedFileEl = document.getElementById('selectedFile');
-    if (selectedFileEl) {
-        selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (청크 기반)';
-    }
-    
-    const nameColEl = document.getElementById('nameCol');
-    const dobColEl = document.getElementById('dobCol');
-    const phoneColEl = document.getElementById('phoneCol');
-    const dongColEl = document.getElementById('dongCol');
-    
-    if (nameColEl) nameColEl.value = window.columnSettings.name;
-    if (dobColEl) dobColEl.value = window.columnSettings.dob;
-    if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
-    if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
-    
-    if (headers.length > 0) {
-        if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
-        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터 (청크 기반)', allMembers.length);
-    }
-    
-    if (window.displayAllMembers) window.displayAllMembers();
-    if (window.saveDataToStorage) window.saveDataToStorage();
-    
-    // 전체 시스템 상태 업데이트
-    if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-    
-    if (statusEl) {
-        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${allMembers.length}명, ${loadedChunks}/${metaData.totalChunks} 청크)`;
+    if (allMembers.length > 0) {
+        // UI 업데이트 및 전역 변수 할당을 포함하는 함수 호출
+        updateUI(allMembers, metaData, statusEl, loadedChunks);
+        
+        return {
+            success: true,
+            count: allMembers.length,
+            chunks: loadedChunks,
+            totalChunks: metaData.totalChunks,
+            lastSync: metaData.lastSync
+        };
+    } else {
+        if (statusEl) {
+            statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
+        }
+        throw new Error('불러온 데이터가 없습니다.');
     }
 }
 
-function updateUIWithLegacyData(data, statusEl) {
-    const headers = data.headers || ['이름', '생년월일', '전화번호', '읍면동'];
+// 구 형식 데이터 로드
+async function loadLegacyData(statusEl) {
+    const docSnapshot = await getDoc(doc(db, 'system', 'memberData'));
+    
+    if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        
+        // syncVersion에 관계없이 members 배열이 있고 비어있지 않은지 확인
+        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
+            // UI 업데이트 및 전역 변수 할당을 포함하는 함수 호출
+            updateUI(data.members, data, statusEl, 1);
+            
+            return {
+                success: true,
+                count: data.members.length,
+                lastSync: data.lastSync,
+                format: 'legacy'
+            };
+        } else {
+            if (statusEl) {
+                statusEl.innerHTML = '⚠️ 데이터 형식이 올바르지 않거나 데이터가 비어있습니다.';
+            }
+            throw new Error('데이터 형식이 올바르지 않거나 데이터가 비어있습니다.');
+        }
+    } else {
+        if (statusEl) {
+            statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
+        }
+        throw new Error('Firebase에 저장된 당원 데이터가 없습니다.');
+    }
+}
+
+// 공통 데이터 변환 및 UI 업데이트 함수 (기존 코드에서 수정 및 분리)
+function updateUI(members, metaData, statusEl, loadedChunks) {
+    // AOA(Array of Arrays) 형식으로 데이터 변환
+    const headers = metaData.headers || ['이름', '생년월일', '전화번호', '읍면동'];
     const convertedData = [headers];
     
-    data.members.forEach(member => {
-        const row = new Array(headers.length);
-        row.fill('');
-        
-        if (data.columnSettings) {
-            row[data.columnSettings.name - 1] = member.name || '';
-            row[data.columnSettings.dob - 1] = member.dob || '';
-            if (data.columnSettings.phone > 0) {
-                row[data.columnSettings.phone - 1] = member.phone || '';
-            }
-            if (data.columnSettings.dong > 0) {
-                row[data.columnSettings.dong - 1] = member.dong || '';
-            }
-        }
-        
+    members.forEach(member => {
+        const row = new Array(headers.length).fill('');
+        const columnSettings = metaData.columnSettings || {};
+        if (columnSettings.name) row[columnSettings.name - 1] = member.name || '';
+        if (columnSettings.dob) row[columnSettings.dob - 1] = member.dob || '';
+        if (columnSettings.phone > 0) row[columnSettings.phone - 1] = member.phone || '';
+        if (columnSettings.dong > 0) row[columnSettings.dong - 1] = member.dong || '';
         convertedData.push(row);
     });
     
-    window.currentData = convertedData; // 전역 변수 window.currentData에 할당
-    window.columnSettings = data.columnSettings || window.columnSettings; // 전역 변수 window.columnSettings에 할당
-    
+    // 전역 변수에 데이터 할당
+    window.currentData = convertedData;
+    window.columnSettings = metaData.columnSettings || window.columnSettings;
+
+    // UI 엘리먼트 업데이트
     const selectedFileEl = document.getElementById('selectedFile');
     if (selectedFileEl) {
-        selectedFileEl.textContent = '✅ Firebase에서 불러온 데이터 (구 형식)';
+        selectedFileEl.textContent = `✅ Firebase에서 불러온 데이터 (${metaData.syncVersion === '3.0' ? '청크 기반' : '구 형식'})`;
     }
     
     const nameColEl = document.getElementById('nameCol');
@@ -800,19 +719,20 @@ function updateUIWithLegacyData(data, statusEl) {
     if (phoneColEl) phoneColEl.value = window.columnSettings.phone || '';
     if (dongColEl) dongColEl.value = window.columnSettings.dong || '';
     
+    // 기타 UI 업데이트 함수 호출
+    const memberCount = members.length;
     if (headers.length > 0) {
         if (window.displayHeaderInfo) window.displayHeaderInfo(headers);
-        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터 (구 형식)', data.members.length);
+        if (window.updateCurrentFileInfo) window.updateCurrentFileInfo('Firebase 데이터', memberCount);
     }
     
     if (window.displayAllMembers) window.displayAllMembers();
     if (window.saveDataToStorage) window.saveDataToStorage();
-    
-    // 전체 시스템 상태 업데이트
     if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
     
     if (statusEl) {
-        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${data.members.length}명, 구 형식)`;
+        const formatInfo = metaData.syncVersion === '3.0' ? `(${loadedChunks}/${metaData.totalChunks} 청크)` : '(구 형식)';
+        statusEl.innerHTML = `✅ Firebase에서 당원 데이터를 성공적으로 불러왔습니다. (${memberCount}명) ${formatInfo}`;
     }
 }
         
