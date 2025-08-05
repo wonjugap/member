@@ -166,7 +166,7 @@
                 db = getFirestore(app);
                 
                 // 개발 환경에서 에뮬레이터 사용 (선택사항)
-                if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+               /* if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
                     try {
                         connectFirestoreEmulator(db, 'localhost', 8080);
                         console.log('🔧 Firestore 에뮬레이터에 연결됨');
@@ -174,7 +174,7 @@
                         console.log('📡 실제 Firestore에 연결됨');
                     }
                 }
-                
+                */
                 // 연결 테스트
                 await performConnectionTest();
                 
