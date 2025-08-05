@@ -120,43 +120,40 @@ function loadFirebaseDataDirectly() {
         }
         
         // **수정된 부분: Promise를 직접 반환합니다.**
-        if (typeof loadResult.then === 'function') {
-            console.log('Promise 반환 확인됨, then 체인 시작');
-
-            // Firebase 데이터 로드 후 강제 초기화
-                if (window.saveDataToStorage) window.saveDataToStorage();
-                if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad(true);
-                if (window.displayAllMembers) window.displayAllMembers();
-                if (window.updateCharts) window.updateCharts();
-                if (window.updateSearchFilters) window.updateSearchFilters();
-                if (window.updateBirthdayList) window.updateBirthdayList();
-                document.querySelectorAll('.no-data').forEach(el => el.style.display = 'none'); // **여기에 'return' 키워드가 추가되었습니다.**
-                console.log('Firebase 데이터 로드 성공:', result);
-                hideFirebaseDataSection();
-                
-                if (result && result.format === 'legacy') {
-                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터 (구 형식)\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}\n\n💡 관리자에게 최신 형식으로 재배포를 요청하세요.`);
-                } else if (result && result.count) {
-                    alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터\n📦 ${result.chunks || 1}/${result.totalChunks || 1} 청크 로드 완료\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}`);
-                } else {
-                    alert('✅ Firebase에서 데이터를 불러왔습니다.');
-                }
-                
-        // 📌 데이터 저장 및 UI 갱신
+if (typeof loadResult.then === 'function') {
+    console.log('Promise 반환 확인됨, then 체인 시작');
+    
+    return loadResult.then((result) => {
+        // Firebase 데이터 로드 후 강제 초기화
         if (window.saveDataToStorage) window.saveDataToStorage();
-        if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad();
-
-                return result; // 결과값도 함께 반환
-            } catch((error) => {
-                console.error('Firebase 데이터 로드 실패:', error);
-                alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
-                throw error; // 에러를 다시 던져서 safeCallFunction이 감지하게 합니다.
-            });
+        if (window.updateSystemAfterDataLoad) window.updateSystemAfterDataLoad(true);
+        if (window.displayAllMembers) window.displayAllMembers();
+        if (window.updateCharts) window.updateCharts();
+        if (window.updateSearchFilters) window.updateSearchFilters();
+        if (window.updateBirthdayList) window.updateBirthdayList();
+        document.querySelectorAll('.no-data').forEach(el => el.style.display = 'none');
+        
+        console.log('Firebase 데이터 로드 성공:', result);
+        hideFirebaseDataSection();
+        
+        if (result && result.format === 'legacy') {
+            alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!`);
+        } else if (result && result.count) {
+            alert(`✅ Firebase에서 당원 데이터를 불러왔습니다. (${result.count}명)`);
         } else {
-            console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
-            alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n반환값이 Promise가 아닙니다.');
-            throw new Error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다.');
+            alert('✅ Firebase에서 데이터를 불러왔습니다.');
         }
+        
+        return result;
+    }).catch((error) => {
+        console.error('Firebase 데이터 로드 실패:', error);
+        alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}`);
+        throw error;
+    });
+} else {
+    console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
+    throw new Error('Promise가 아님');
+}
     } catch (error) {
         console.error('loadFirebaseDataDirectly 실행 중 예외:', error);
         alert(`❌ Firebase 데이터 로드 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
