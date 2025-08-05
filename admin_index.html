@@ -301,7 +301,7 @@ function defineFirebaseFunctions() {
                             window.displayUserList();
                         }
                         
-                        alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
+                        alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}\n\n시스템 접근 권한이 필요한 경우, 관리자에게 문의하세요.`);
                         
                         resolve(true);
                     } else {
@@ -562,57 +562,44 @@ function defineFirebaseFunctions() {
         
         alert(`${fileName} 파일이 다운로드되었습니다.`);
     };
-    
-    // 당원 데이터 다운로드 (Excel 파일)
-    window.downloadMemberDataFromFirebase = function() {
+
+    // 불러온 결과 저장 (새로 추가된 기능)
+    window.saveLoadedDataToExcel = function() {
         return new Promise((resolve, reject) => {
-            console.log('📥 당원 데이터 다운로드 시작...');
+            console.log('📥 불러온 결과 저장 시작...');
             const statusEl = document.getElementById('syncStatus') || document.getElementById('firebaseDataStatus');
 
-            if (statusEl) {
-                statusEl.innerHTML = '📥 Firebase에서 당원 데이터를 불러오는 중...';
+            if (!window.currentData || window.currentData.length <= 1) {
+                const errorMsg = '저장할 데이터가 없습니다. 먼저 당원 데이터를 불러와주세요.';
+                if (statusEl) {
+                    statusEl.innerHTML = `⚠️ ${errorMsg}`;
+                }
+                alert(`⚠️ ${errorMsg}`);
+                reject(new Error(errorMsg));
+                return;
             }
 
-            // 다운로드 시에도 데이터 로드를 다시 수행하여 최신 상태를 보장
-            window.loadMemberDataFromFirebase().then(loadResult => {
-                if (!loadResult || !window.currentData || window.currentData.length <= 1) {
-                    const errorMsg = '다운로드할 데이터가 없습니다.';
-                    if (statusEl) {
-                        statusEl.innerHTML = `⚠️ ${errorMsg}`;
-                    }
-                    alert(`⚠️ ${errorMsg}\n\nFirebase에 데이터가 있는지 확인해주세요.`);
-                    reject(new Error(errorMsg));
-                    return;
-                }
+            console.log('✅ 데이터 확인, Excel 파일 생성 시작');
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 데이터 로드 성공, Excel 파일 생성 중...`;
+            }
 
-                console.log('✅ 데이터 로드 성공, Excel 파일 생성 시작');
-                if (statusEl) {
-                    statusEl.innerHTML = `✅ 데이터 로드 성공, Excel 파일 생성 중...`;
-                }
+            // `window.currentData`는 이미 헤더를 포함한 배열입니다.
+            const ws = XLSX.utils.aoa_to_sheet(window.currentData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '당원목록');
 
-                // `window.currentData`는 이미 헤더를 포함한 배열입니다.
-                const ws = XLSX.utils.aoa_to_sheet(window.currentData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, '당원목록');
+            const fileName = `불러온_당원_데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
 
-                const fileName = `당원_데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-                XLSX.writeFile(wb, fileName);
+            alert(`✅ ${fileName} 파일이 다운로드되었습니다.\n\n📊 총 ${window.currentData.length - 1}명의 데이터`);
+            console.log('✅ 파일 다운로드 완료');
 
-                alert(`✅ ${fileName} 파일이 다운로드되었습니다.\n\n📊 총 ${loadResult.count}명의 데이터`);
-                console.log('✅ 파일 다운로드 완료');
+            if (statusEl) {
+                statusEl.innerHTML = `✅ 불러온 당원 데이터 저장 완료 (${window.currentData.length - 1}명)`;
+            }
+            resolve({ count: window.currentData.length - 1, success: true });
 
-                if (statusEl) {
-                    statusEl.innerHTML = `✅ 당원 데이터 다운로드 완료 (${loadResult.count}명)`;
-                }
-                resolve(loadResult);
-            }).catch(error => {
-                console.error('❌ 당원 데이터 다운로드 중 오류 발생:', error);
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 다운로드 실패: ${error.message}`;
-                }
-                alert(`❌ 당원 데이터 다운로드 실패\n\n${error.message}`);
-                reject(error);
-            });
         });
     };
     
@@ -1806,7 +1793,9 @@ async function loadLegacyData(statusEl) {
                             <button onclick="safeCallFunction('loadUsersFromFirebase')" class="btn btn-info">📥 사용자 불러오기</button>
                             <button onclick="safeCallFunction('syncMemberDataToFirebase')" class="btn btn-success">📊 당원 데이터 업로드</button>
                             <button onclick="safeCallFunction('loadMemberDataFromFirebaseInTab')" class="btn btn-info">📥 당원 데이터 불러오기</button>
-                            <button onclick="safeCallFunction('downloadMemberDataFromFirebase')" class="btn btn-warning">📥 당원 데이터 다운로드</button>
+                            <button class="btn btn-info" onclick="safeCallFunction('saveLoadedDataToExcel')">
+                                    <i class="fas fa-download"></i> 불러온 결과 저장
+                            </button>
                             <button onclick="safeCallFunction('checkFirebaseConnection')" class="btn btn-info">🔗 연결 상태 확인</button>
                             <button onclick="safeCallFunction('downloadUserCredentials')" class="btn btn-warning">📋 사용자 계정 목록</button>
                         </div>
