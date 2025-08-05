@@ -808,7 +808,7 @@
         }
         
         
-        // Firebase 실시간 구독 (수정된 부분)
+// Firebase 실시간 구독
         function startRealtimeSubscriptions(dbInstance) {
             if (!dbInstance) {
                 console.error("❌ startRealtimeSubscriptions: 유효한 db 인스턴스가 제공되지 않았습니다.");
@@ -816,20 +816,32 @@
             }
 
             // 사용자 데이터 구독
+            // 사용자 정보 변경 시 실시간으로 window.users를 업데이트합니다.
             onSnapshot(doc(dbInstance, 'system', 'users'), (docSnap) => {
                 if (docSnap.exists()) {
                     window.users = docSnap.data().users || {};
-                    console.log("👥 사용자 목록 실시간 업데이트:", window.users);
-                    if (window.displayUserList) displayUserList();
+                    console.log("👥 사용자 목록 실시간 업데이트 감지");
+                    // UI에 사용자 목록을 다시 표시하는 함수가 있다면 호출
+                    if (window.displayUserList) {
+                        window.displayUserList();
+                    }
                 }
+            }, (error) => {
+                console.error("❌ 사용자 데이터 구독 중 오류 발생:", error);
             });
 
-            // 당원 메타데이터 구독 - 변경 감지 시 데이터 재로드
+            // 당원 메타데이터 구독
+            // 메타데이터가 변경되면 전체 당원 데이터를 재로드합니다.
             onSnapshot(doc(dbInstance, 'memberData', 'metadata'), (metaSnap) => {
                 if (metaSnap.exists()) {
                     console.log("📊 당원 메타데이터 실시간 업데이트 감지, 데이터 재로드 시작...");
-                    safeCallFunction('loadMemberDataFromFirebaseInTab');
+                    // 메타데이터 변경 시 데이터 재로드 함수를 호출합니다.
+                    if (window.safeCallFunction) {
+                        window.safeCallFunction('loadMemberDataFromFirebaseInTab');
+                    }
                 }
+            }, (error) => {
+                console.error("❌ 당원 메타데이터 구독 중 오류 발생:", error);
             });
         }
 
