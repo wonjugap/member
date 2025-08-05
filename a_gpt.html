@@ -1946,35 +1946,35 @@ function startRealtimeSubscriptions() {
             return date.toLocaleDateString('ko-KR');
         }
 
-        function isBirthday(dob, targetDate = new Date()) {
-            if (!dob) return false;
-            
-            let birthDate;
-            if (typeof dob === 'number') {
-                birthDate = new Date((dob - 25569) * 86400 * 1000);
-else {
-                const dateStr = dob.toString().replace(/[^\d]/g, '');
-                if (dateStr.length === 8) {
-                    const year = dateStr.substring(0, 4);
-                    const month = dateStr.substring(4, 6);
-                    const day = dateStr.substring(6, 8);
-                    birthDate = new Date(year, month - 1, day);
-                } else if (dateStr.length === 6) {
-                    let year = parseInt(dateStr.substring(0, 2));
-                    year = year < 30 ? 2000 + year : 1900 + year;
-                    const month = dateStr.substring(2, 4);
-                    const day = dateStr.substring(4, 6);
-                    birthDate = new Date(year, month - 1, day);
-else {
-                    birthDate = new Date(dob);
-                }
-            }
-            
-            if (isNaN(birthDate.getTime())) return false;
-            
-            return birthDate.getMonth() === targetDate.getMonth() && 
-                   birthDate.getDate() === targetDate.getDate();
+function isBirthday(dob, targetDate = new Date()) {
+    if (!dob) return false;
+
+    let birthDate;
+    if (typeof dob === 'number') {
+        birthDate = new Date((dob - 25569) * 86400 * 1000);
+    } else {
+        const dateStr = dob.toString().replace(/[^\d]/g, '');
+        if (dateStr.length === 8) {
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            birthDate = new Date(year, month - 1, day);
+        } else if (dateStr.length === 6) {
+            let year = parseInt(dateStr.substring(0, 2));
+            year = year < 30 ? 2000 + year : 1900 + year;
+            const month = dateStr.substring(2, 4);
+            const day = dateStr.substring(4, 6);
+            birthDate = new Date(year, month - 1, day);
+        } else {
+            birthDate = new Date(dob);
         }
+    }
+
+    if (isNaN(birthDate.getTime())) return false;
+
+    return birthDate.getMonth() === targetDate.getMonth() &&
+           birthDate.getDate() === targetDate.getDate();
+}
 
         // Firebase 상태 업데이트
         function updateFirebaseStatus(connected, message) {
