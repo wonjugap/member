@@ -32,62 +32,62 @@
         
         // 안전한 함수 호출 헬퍼
         function safeCallFunction(functionName, ...args) {
-            try {
-                console.log(`🔧 ${functionName} 함수 호출 시작`);
-                
-                const func = window[functionName];
-                if (typeof func !== 'function') {
-                    console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
-                    alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
-                    return null;
-                }
-                
-                const firebaseFunctions = [
-                    'loadMemberDataFromFirebase',
-                    'loadMemberDataFromFirebaseInTab', 
-                    'loadFirebaseDataDirectly',
-                    'syncMemberDataToFirebase',
-                    'syncUsersToFirebase',
-                    'loadUsersFromFirebase'
-                ];
-                
-                if (firebaseFunctions.includes(functionName)) {
-                    if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
-                        console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
-                        alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
-                        return null;
-                    }
-                }
-                
-                let result;
-                try {
-                    result = func(...args);
-                } catch (execError) {
-                    console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
-                    alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
-                    return null;
-                }
-                
-                if (result && typeof result.then === 'function') {
-                    console.log(`⚡ ${functionName}가 Promise를 반환했습니다`);
-                    result.then((success) => {
-                        console.log(`✅ ${functionName} Promise 성공 완료:`, success);
-                    }).catch((error) => {
-                        console.error(`❌ ${functionName} Promise 실행 중 오류:`, error);
-                        alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${error.message}`);
-                    });
-                } else {
-                    console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
-                }
-                
-                return result;
-                
-            } catch (error) {
-                console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
-                alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+    try {
+        console.log(`🔧 ${functionName} 함수 호출 시작`);
+        
+        const func = window[functionName];
+        if (typeof func !== 'function') {
+            console.error(`❌ ${functionName} 함수를 찾을 수 없습니다`);
+            alert(`❌ ${functionName} 함수를 찾을 수 없습니다.\n페이지를 새로고침해주세요.`);
+            return null;
+        }
+        
+        const firebaseFunctions = [
+            'loadMemberDataFromFirebase',
+            'loadMemberDataFromFirebaseInTab', 
+            'loadFirebaseDataDirectly',
+            'syncMemberDataToFirebase',
+            'syncUsersToFirebase',
+            'loadUsersFromFirebase'
+        ];
+        
+        if (firebaseFunctions.includes(functionName)) {
+            if (!window.firebaseInitialized && functionName !== 'checkFirebaseConnection') {
+                console.warn(`⚠️ Firebase가 초기화되지 않았지만 ${functionName} 호출 시도`);
+                alert('⚠️ Firebase 연결이 초기화되지 않았습니다.\n오프라인 모드로 작업하거나 Firebase 설정을 확인해주세요.');
                 return null;
             }
         }
+        
+        let result;
+        try {
+            result = func(...args);
+        } catch (execError) {
+            console.error(`❌ ${functionName} 실행 중 예외 발생:`, execError);
+            alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${execError.message}`);
+            return null;
+        }
+        
+        if (result && typeof result.then === 'function') {
+            console.log(`⚡ ${functionName}가 Promise를 반환했습니다`);
+            result.then((success) => {
+                console.log(`✅ ${functionName} Promise 성공 완료:`, success);
+            }).catch((error) => {
+                console.error(`❌ ${functionName} Promise 실행 중 오류:`, error);
+                alert(`❌ ${functionName} 실행 중 오류가 발생했습니다:\n${error.message}`);
+            });
+        } else {
+            console.log(`✅ ${functionName} 함수 완료 (동기 실행), 반환값:`, typeof result);
+        }
+        
+        return result;
+        
+    } catch (error) {
+        console.error(`❌ ${functionName} 호출 중 예외 발생:`, error);
+        alert(`❌ ${functionName} 호출 중 오류가 발생했습니다:\n${error.message}\n\n페이지를 새로고침해주세요.`);
+        return null;
+    }
+}
 
         window.safeCallFunction = safeCallFunction;
         
@@ -133,14 +133,14 @@
                             alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터 (구 형식)\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}\n\n💡 관리자에게 최신 형식으로 재배포를 요청하세요.`);
                         } else if (result && result.count) {
                             alert(`✅ Firebase에서 당원 데이터를 불러왔습니다!\n\n📊 총 ${result.count}명의 데이터\n📦 ${result.chunks || 1}/${result.totalChunks || 1} 청크 로드 완료\n📅 마지막 동기화: ${new Date(result.lastSync).toLocaleString('ko-KR')}`);
-                        } else {
+else {
                             alert('✅ Firebase에서 데이터를 불러왔습니다.');
                         }
                     }).catch((error) => {
                         console.error('Firebase 데이터 로드 실패:', error);
                         alert(`❌ Firebase 데이터 로드 실패\n\n${error.message}\n\n관리자에게 문의하거나 새 파일을 업로드하세요.`);
                     });
-                } else {
+else {
                     console.error('loadMemberDataFromFirebase가 Promise를 반환하지 않았습니다:', typeof loadResult);
                     alert('❌ Firebase 데이터 로드 기능에 문제가 있습니다.\n반환값이 Promise가 아닙니다.');
                 }
@@ -305,7 +305,7 @@
                                 alert(`✅ Firebase에서 사용자 정보를 불러왔습니다!\n\n👥 총 ${newUserCount}명의 사용자\n📅 마지막 동기화: ${data.lastSync ? new Date(data.lastSync).toLocaleString('ko-KR') : '알 수 없음'}`);
                                 
                                 resolve(true);
-                            } else {
+else {
                                 console.log('❌ Firebase에 사용자 데이터가 없음');
                                 if (statusEl) {
                                     statusEl.innerHTML = '📭 Firebase에 저장된 사용자 데이터가 없습니다.';
@@ -313,7 +313,7 @@
                                 alert('📭 Firebase에 저장된 사용자 데이터가 없습니다.\n\n먼저 사용자 동기화를 실행하세요.');
                                 resolve(false);
                             }
-                        } else {
+else {
                             console.log('❌ Firebase 사용자 문서가 존재하지 않음');
                             if (statusEl) {
                                 statusEl.innerHTML = '📭 Firebase에 사용자 문서가 없습니다.';
@@ -353,11 +353,11 @@
                             if (metaData.syncVersion === '3.0') {
                                 // 새 청크 기반 형식
                                 loadChunkedData(metaData, statusEl).then(resolve).catch(reject);
-                            } else {
+else {
                                 // 구 형식 데이터
                                 loadLegacyData(statusEl).then(resolve).catch(reject);
                             }
-                        } else {
+else {
                             // 메타데이터가 없으면 구 형식 확인
                             loadLegacyData(statusEl).then(resolve).catch(reject);
                         }
@@ -544,7 +544,7 @@
                 
                 if (!isConnected) {
                     alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.');
-                } else {
+else {
                     alert('✅ Firebase 연결 상태 양호\n\n모든 클라우드 기능을 사용할 수 있습니다.');
                 }
                 
@@ -608,7 +608,7 @@
                     totalChunks: metaData.totalChunks,
                     lastSync: metaData.lastSync
                 };
-            } else {
+else {
                 if (statusEl) {
                     statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
                 }
@@ -631,13 +631,13 @@
                         lastSync: data.lastSync,
                         format: 'legacy'
                     };
-                } else {
+else {
                     if (statusEl) {
                         statusEl.innerHTML = '⚠️ 호환되지 않는 데이터 형식입니다.';
                     }
                     throw new Error('호환되지 않는 데이터 형식입니다.');
                 }
-            } else {
+else {
                 if (statusEl) {
                     statusEl.innerHTML = '📭 Firebase에 저장된 당원 데이터가 없습니다.';
                 }
@@ -785,7 +785,7 @@
                             window.updateFirebaseStatus(false, '오프라인 모드');
                         }
                         activateOfflineMode();
-                    } else {
+else {
                         if (window.updateFirebaseStatus) {
                             window.updateFirebaseStatus(false, `재연결 시도 중 (${connectionRetryCount}/${maxRetries})`);
                         }
@@ -1884,49 +1884,49 @@ function startRealtimeSubscriptions() {
         };
 
         // 유틸리티 함수들
-        function calculateAge(dob) {
-            if (!dob) return 0;
-            
-            let birthDate;
-            
-            if (typeof dob === 'number') {
-                // 엑셀 시리얼 날짜인 경우
-                birthDate = new Date((dob - 25569) * 86400 * 1000);
-            } else if (typeof dob === 'string') {
-                // 문자열 날짜 처리
-                const dateStr = dob.toString().replace(/[^\d]/g, '');
-                if (dateStr.length === 8) {
-                    // YYYYMMDD 형식
-                    const year = dateStr.substring(0, 4);
-                    const month = dateStr.substring(4, 6);
-                    const day = dateStr.substring(6, 8);
-                    birthDate = new Date(year, month - 1, day);
-                } else if (dateStr.length === 6) {
-                    // YYMMDD 형식
-                    let year = parseInt(dateStr.substring(0, 2));
-                    year = year < 30 ? 2000 + year : 1900 + year;
-                    const month = dateStr.substring(2, 4);
-                    const day = dateStr.substring(4, 6);
-                    birthDate = new Date(year, month - 1, day);
-                } else {
-                    birthDate = new Date(dob);
-                }
-            } else {
-                birthDate = new Date(dob);
-            }
-            
-            if (isNaN(birthDate.getTime())) return 0;
-            
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-            
-            return age;
+     function calculateAge(dob) {
+    if (!dob) return 0;
+
+    let birthDate;
+
+    if (typeof dob === 'number') {
+        // 엑셀 시리얼 날짜인 경우
+        birthDate = new Date((dob - 25569) * 86400 * 1000);
+    } else if (typeof dob === 'string') {
+        // 문자열 날짜 처리
+        const dateStr = dob.toString().replace(/[^\d]/g, '');
+        if (dateStr.length === 8) {
+            // YYYYMMDD 형식
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            birthDate = new Date(year, month - 1, day);
+        } else if (dateStr.length === 6) {
+            // YYMMDD 형식
+            let year = parseInt(dateStr.substring(0, 2));
+            year = year < 30 ? 2000 + year : 1900 + year;
+            const month = dateStr.substring(2, 4);
+            const day = dateStr.substring(4, 6);
+            birthDate = new Date(year, month - 1, day);
+        } else {
+            birthDate = new Date(dob);
         }
+    } else {
+        birthDate = new Date(dob);
+    }
+
+    if (isNaN(birthDate.getTime())) return 0;
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+
+    return age;
+}
 
         function getAgeGroup(age) {
             if (age < 20) return '10대';
@@ -1952,7 +1952,7 @@ function startRealtimeSubscriptions() {
             let birthDate;
             if (typeof dob === 'number') {
                 birthDate = new Date((dob - 25569) * 86400 * 1000);
-            } else {
+else {
                 const dateStr = dob.toString().replace(/[^\d]/g, '');
                 if (dateStr.length === 8) {
                     const year = dateStr.substring(0, 4);
@@ -1965,7 +1965,7 @@ function startRealtimeSubscriptions() {
                     const month = dateStr.substring(2, 4);
                     const day = dateStr.substring(4, 6);
                     birthDate = new Date(year, month - 1, day);
-                } else {
+else {
                     birthDate = new Date(dob);
                 }
             }
@@ -1984,7 +1984,7 @@ function startRealtimeSubscriptions() {
             if (connected) {
                 indicator.className = 'connection-indicator connected';
                 statusEl.innerHTML = `<span class="connection-indicator connected"></span>Firebase: ${message}`;
-            } else {
+else {
                 indicator.className = 'connection-indicator disconnected';
                 statusEl.innerHTML = `<span class="connection-indicator disconnected"></span>Firebase: ${message}`;
             }
@@ -1994,7 +1994,7 @@ function startRealtimeSubscriptions() {
         function testFirebaseConnection() {
             if (window.retryFirebaseConnection) {
                 window.retryFirebaseConnection();
-            } else {
+else {
                 alert('Firebase 재연결 기능을 사용할 수 없습니다.\n\n오프라인 모드로 계속 작업할 수 있습니다.\n로컬에서 모든 기능이 정상 작동합니다.');
             }
         }
@@ -2011,7 +2011,13 @@ function updateOfflineModeUI(isOffline) {
         if (offlineNotice) {
             offlineNotice.style.display = 'block';
         }
-    } else {
+else {
+        if (offlineNotice) {
+            offlineNotice.style.display = 'none';
+        }
+    }
+}
+else {
         if (offlineNotice) {
             offlineNotice.style.display = 'none';
         }
@@ -2029,7 +2035,7 @@ function updateOfflineModeUI(isOffline) {
 
         // 사용자 정보 로드 함수
         ;
-                    } else {
+else {
                         console.log('기존 admin 계정 발견. 비밀번호:', loadedUsers.admin.password);
                         if (!loadedUsers.admin.permissions || loadedUsers.admin.permissions.length === 0) {
                             loadedUsers.admin.permissions = [
@@ -2106,7 +2112,7 @@ async function login() {
             document.getElementById('mainApp').style.display = 'block';
             document.getElementById('currentUser').textContent = `👤 ${id}`;
             alert(`환영합니다, ${id}님!`);
-        } else {
+else {
             alert("로그인 실패. 아이디 또는 비밀번호가 틀렸습니다.");
         }
     } catch (err) {
@@ -2155,7 +2161,7 @@ async function login() {
                 applyPermissions();
                 
                 console.log(`✅ ${username}님이 로그인했습니다.`);
-            } else {
+else {
                 console.log('로그인 실패. 사용자 정보:', users[username]);
                 
                 if (username === 'admin') {
@@ -2216,7 +2222,7 @@ async function login() {
                 if (currentUserData.permissions.includes(tabText)) {
                     tab.style.display = 'block';
                     tab.disabled = false;
-                } else {
+else {
                     tab.style.display = 'none';
                 }
             });
@@ -2271,7 +2277,7 @@ async function login() {
                         const csvText = e.target.result;
                         const rows = csvText.split('\n').map(row => row.split(','));
                         data = rows.filter(row => row.some(cell => cell.trim() !== ''));
-                    } else {
+else {
                         // 엑셀 파일 처리
                         const workbook = XLSX.read(e.target.result, { type: 'binary' });
                         const sheetName = workbook.SheetNames[0];
@@ -2310,7 +2316,7 @@ async function login() {
             
             if (file.name.endsWith('.csv')) {
                 reader.readAsText(file, 'UTF-8');
-            } else {
+else {
                 reader.readAsBinaryString(file);
             }
         }
@@ -2462,7 +2468,7 @@ async function login() {
             if (dateOption === 'specific') {
                 specificDate.style.display = 'block';
                 specificDate.value = new Date().toISOString().split('T')[0];
-            } else {
+else {
                 specificDate.style.display = 'none';
             }
         }
@@ -2672,7 +2678,7 @@ async function login() {
                         </div>
                     </div>
                 `;
-            } else {
+else {
                 // 중복 데이터
                 title.textContent = `${group.representative.name}님 - 중복 데이터 (${group.count}명)`;
                 let duplicateHtml = `
@@ -3151,14 +3157,14 @@ async function login() {
                 let date;
                 if (typeof dateStr === 'number') {
                     date = new Date((dateStr - 25569) * 86400 * 1000);
-                } else {
+else {
                     const cleanStr = dateStr.toString().replace(/[^\d]/g, '');
                     if (cleanStr.length === 8) {
                         const year = cleanStr.substring(0, 4);
                         const month = cleanStr.substring(4, 6);
                         const day = cleanStr.substring(6, 8);
                         date = new Date(year, month - 1, day);
-                    } else {
+else {
                         date = new Date(dateStr);
                     }
                 }
@@ -3482,7 +3488,7 @@ async function login() {
             
             if (window.currentUserAction === 'add') {
                 alert(`✅ 새 사용자 "${userId}"가 추가되었습니다.\n\n이제 Firebase 동기화를 실행하여 서버에 업로드하세요.`);
-            } else {
+else {
                 alert(`✅ 사용자 "${userId}" 정보가 수정되었습니다.\n\nFirebase 동기화를 실행하여 서버에 업데이트하세요.`);
             }
         }
