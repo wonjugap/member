@@ -353,7 +353,7 @@ function defineFirebaseFunctions() {
                             
                             if (metaData.syncVersion === '3.0') {
                                 // 새 청크 기반 형식
-                                loadChunkedData(metaData, statusEl).then(resolve).catch(reject);
+                                loadChunkedData(metaData, statusEl).then(resolve).catch(reject); }
 else {
                                 // 구 형식 데이터
                                 loadLegacyData(statusEl).then(resolve).catch(reject);
@@ -544,7 +544,7 @@ else {
                 console.log('- 최종 연결 상태:', isConnected);
                 
                 if (!isConnected) {
-                    alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.');
+                    alert('❌ Firebase 연결 상태 불량\n\n• Firebase 초기화 상태를 확인하세요\n• 네트워크 연결을 확인하세요\n• 브라우저 콘솔에서 오류를 확인하세요\n\n오프라인 모드로 계속 작업할 수 있습니다.'); }
 else {
                     alert('✅ Firebase 연결 상태 양호\n\n모든 클라우드 기능을 사용할 수 있습니다.');
                 }
@@ -608,7 +608,7 @@ else {
                     chunks: loadedChunks,
                     totalChunks: metaData.totalChunks,
                     lastSync: metaData.lastSync
-                };
+                }; }
 else {
                 if (statusEl) {
                     statusEl.innerHTML = '⚠️ 불러온 데이터가 없습니다.';
@@ -631,7 +631,7 @@ else {
                         count: data.members.length,
                         lastSync: data.lastSync,
                         format: 'legacy'
-                    };
+                    }; }
 else {
                     if (statusEl) {
                         statusEl.innerHTML = '⚠️ 호환되지 않는 데이터 형식입니다.';
@@ -785,7 +785,7 @@ else {
                         if (window.updateFirebaseStatus) {
                             window.updateFirebaseStatus(false, '오프라인 모드');
                         }
-                        activateOfflineMode();
+                        activateOfflineMode(); }
 else {
                         if (window.updateFirebaseStatus) {
                             window.updateFirebaseStatus(false, `재연결 시도 중 (${connectionRetryCount}/${maxRetries})`);
@@ -2022,7 +2022,7 @@ function updateOfflineModeUI(isOffline) {
         function showOfflineNotice() {
             updateOfflineModeUI();
         }
-        ;
+        ; }
 else {
                         console.log('기존 admin 계정 발견. 비밀번호:', loadedUsers.admin.password);
                         if (!loadedUsers.admin.permissions || loadedUsers.admin.permissions.length === 0) {
@@ -2099,7 +2099,7 @@ async function login() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             document.getElementById('currentUser').textContent = `👤 ${id}`;
-            alert(`환영합니다, ${id}님!`);
+            alert(`환영합니다, ${id}님!`); }
 else {
             alert("로그인 실패. 아이디 또는 비밀번호가 틀렸습니다.");
         }
@@ -2148,7 +2148,7 @@ else {
                 
                 applyPermissions();
                 
-                console.log(`✅ ${username}님이 로그인했습니다.`);
+                console.log(`✅ ${username}님이 로그인했습니다.`); }
 else {
                 console.log('로그인 실패. 사용자 정보:', users[username]);
                 
@@ -2209,7 +2209,7 @@ else {
                 
                 if (currentUserData.permissions.includes(tabText)) {
                     tab.style.display = 'block';
-                    tab.disabled = false;
+                    tab.disabled = false; }
 else {
                     tab.style.display = 'none';
                 }
@@ -2264,7 +2264,7 @@ else {
                         // CSV 파일 처리
                         const csvText = e.target.result;
                         const rows = csvText.split('\n').map(row => row.split(','));
-                        data = rows.filter(row => row.some(cell => cell.trim() !== ''));
+                        data = rows.filter(row => row.some(cell => cell.trim() !== '')); }
 else {
                         // 엑셀 파일 처리
                         const workbook = XLSX.read(e.target.result, { type: 'binary' });
@@ -2303,7 +2303,7 @@ else {
             };
             
             if (file.name.endsWith('.csv')) {
-                reader.readAsText(file, 'UTF-8');
+                reader.readAsText(file, 'UTF-8'); }
 else {
                 reader.readAsBinaryString(file);
             }
@@ -2455,7 +2455,7 @@ else {
             
             if (dateOption === 'specific') {
                 specificDate.style.display = 'block';
-                specificDate.value = new Date().toISOString().split('T')[0];
+                specificDate.value = new Date().toISOString().split('T')[0]; }
 else {
                 specificDate.style.display = 'none';
             }
@@ -2665,7 +2665,7 @@ else {
                             <button onclick="deleteMemberFromDetail(${member.index})" class="btn btn-danger">🗑️ 삭제</button>
                         </div>
                     </div>
-                `;
+                `; }
 else {
                 // 중복 데이터
                 title.textContent = `${group.representative.name}님 - 중복 데이터 (${group.count}명)`;
@@ -3144,14 +3144,14 @@ else {
             try {
                 let date;
                 if (typeof dateStr === 'number') {
-                    date = new Date((dateStr - 25569) * 86400 * 1000);
+                    date = new Date((dateStr - 25569) * 86400 * 1000); }
 else {
                     const cleanStr = dateStr.toString().replace(/[^\d]/g, '');
                     if (cleanStr.length === 8) {
                         const year = cleanStr.substring(0, 4);
                         const month = cleanStr.substring(4, 6);
                         const day = cleanStr.substring(6, 8);
-                        date = new Date(year, month - 1, day);
+                        date = new Date(year, month - 1, day); }
 else {
                         date = new Date(dateStr);
                     }
@@ -3475,7 +3475,7 @@ else {
             closeModal('userModal');
             
             if (window.currentUserAction === 'add') {
-                alert(`✅ 새 사용자 "${userId}"가 추가되었습니다.\n\n이제 Firebase 동기화를 실행하여 서버에 업로드하세요.`);
+                alert(`✅ 새 사용자 "${userId}"가 추가되었습니다.\n\n이제 Firebase 동기화를 실행하여 서버에 업로드하세요.`); }
 else {
                 alert(`✅ 사용자 "${userId}" 정보가 수정되었습니다.\n\nFirebase 동기화를 실행하여 서버에 업데이트하세요.`);
             }
